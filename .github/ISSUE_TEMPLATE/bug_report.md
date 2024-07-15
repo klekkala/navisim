@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Create a report for bug found during execution of the program
-title: ''
+title: '[BUG] '
 labels: ''
 assignees: ''
 
