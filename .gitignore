@@ -13,9 +13,8 @@ src/data/cropped_pano_images
 src/data/pano_images
 
 # Gaussian Splat file
-src/assets/gaussian_input/point_cloud/iteration_30000/point_cloud.ply
-src/assets/gaussian_output/
-src/assets/splat/*
+*.ply
+*.pcd
 
 
 # Mac files
