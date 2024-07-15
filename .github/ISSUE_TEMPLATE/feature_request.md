@@ -1,7 +1,7 @@
 ---
 name: Feature Request
 about: Create a request for additional features to be added to the program
-title: ''
+title: "[FEAT] "
 labels: ''
 assignees: ''
 
