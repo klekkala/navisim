@@ -34,8 +34,7 @@ class Node:
         self.splat_file_path = os.path.join(sector_path, 'point_cloud.ply')
 
         self.point_cloud = o3d.io.read_point_cloud(self.splat_file_path)
-        self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation = get_elevation_map(
-            self.point_cloud, height_limit=3.5, grid_resolution=5)
+        self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation = get_elevation_map(self.point_cloud)
         self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0.175)
         self.transformation_matrix = self._get_transformation_matrix(os.path.join(sector_path, 'transformation.txt'))
         self.sector_boundary = self._get_boundary_polygon(occupancy_map=self.occupancy_map)

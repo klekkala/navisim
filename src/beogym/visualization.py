@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import open3d as o3d
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 # from scipy.spatial import ConvexHull
 # from scipy.spatial import Delaunay
 
