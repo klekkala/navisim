@@ -38,6 +38,6 @@ project
 ├─── tests/   (optional)
 │    ├─── test_env.py
 │    └── ...    
-└──── evaluation/
+└─── evaluation/
        └── ...   
 ```
