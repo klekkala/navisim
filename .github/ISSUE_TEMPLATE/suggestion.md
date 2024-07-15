@@ -1,7 +1,7 @@
 ---
 name: Suggestion
 about: Any suggestion, both development and non-development) for the project
-title: ''
+title: "[SUGGESTION] "
 labels: ''
 assignees: ''
 
