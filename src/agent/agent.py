@@ -7,15 +7,15 @@ from submodules.gaussian.scene import Scene
 from submodules.gaussian.gaussian_renderer import render
 from submodules.gaussian.gaussian_renderer import GaussianModel
 from submodules.gaussian.scene.customCameras import CustomCamera
+from src.paths import *
 
 class Agent:
-    def __init__(self, elevation_map, grid_resolution, elevation_x_offset, elevation_y_offset, min_height, start_location):
+    def __init__(self, node, start_location):
+        self.model_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, 'gaussian_input')
         self.start_location = start_location
         start_x, start_z = start_location
 
         # Gaussian Splatting Initialization
-        self.model_path = './src/assets/gaussian_input'
-        self.render_output_path = './src/assets/'
         self.render_output_folderName = 'gaussian_output'
         self.global_pose = [start_x, 0, start_z, 0, 0, np.pi]
         self.local_pose = [0, 0, 0, 0, 0, np.pi]
@@ -23,13 +23,13 @@ class Agent:
         self.initScene()
 
         # Elevation Map Initialization
-        self.elevation_map = elevation_map
-        self.elevation_map_size = elevation_map.shape[0]  # The size of the elevation map
-        self.elevation_map_height = elevation_map.shape[1]
-        self.elevation_x_offset = elevation_x_offset
-        self.elevation_y_offset = elevation_y_offset
-        self.grid_resolution = grid_resolution
-        self.min_height = min_height
+        self.elevation_map = node.elevation_map
+        self.elevation_map_size = node.elevation_map.shape[0]  # The size of the elevation map
+        self.elevation_map_height = node.elevation_map.shape[1]
+        self.elevation_x_offset = node.offset_x
+        self.elevation_y_offset = node.offset_y
+        self.grid_resolution = node.grid_resolution
+        self.min_height = node.min_height
 
         # Motion Model Initialization
         self.metadata = {"render_modes": ["human", "rgb_array"], "agent_size": 0.75, "agent_height": 1.75}

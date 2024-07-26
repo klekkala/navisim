@@ -172,7 +172,6 @@ def get_point_cloud(file_path):
     :param file_path: relative path of the point cloud file
     :return: point cloud file
     '''
-    file_path = "src/assets/surfaceMap.pcd"
     # file_path = "src/assets/surfaceMap_clean.pcd"
     pcd = o3d.io.read_point_cloud(file_path)
     return pcd

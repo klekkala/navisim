@@ -22,28 +22,29 @@ class BeoGym(gym.Env):
 
         config = config or {}
         self.sequence_graph = sequence_graph
-        self.current_node = next(iter(self.sequence_graph))
-        current_point_cloud = self.current_node.point_cloud
-        self.elevation_map = current_point_cloud.elevation_map
-        self.grid_resolution = current_point_cloud.grid_resolution
-        self.offset_x, self.offset_y, self.min_height = current_point_cloud.get_elevation_map_info()
-        
-        self.elevation_map_size = self.elevation_map.shape[0]  # The size of the elevation map
-        self.elevation_map_height = self.elevation_map.shape[1]
+        self.current_node = self.get_node_from_sequence_graph(agent_location = start_location)
+        # current_point_cloud = self.current_node.point_cloud
 
-        assert 0 <= start_location[0] <= self.elevation_map_size or 0 <= start_location[1] <= self.elevation_map_size, f'Startting cooridnate should be within the boundaries of the elevation map({self.elevation_map_size}x{self.elevation_map_size}:{start_location})'
-        assert 0 <= start_location[0] <= self.elevation_map_size or 0 <= start_location[1] <= self.elevation_map_size, f'Startting cooridnate should be within the boundaries of the elevation map({self.self.elevation_map_size}x{self.elevation_map_size})'
-        assert 0 <= target_location[0] <= self.elevation_map_size or 0 <= target_location[1] <= self.elevation_map_size, f'Target cooridnate should be within the boundaries of the elevation map({self.elevation_map_size}x{self.elevation_map_size})'
+        #TODO (jiwon) : currently using global elevation map, will have to change to elevation map of each sector
+        #self.elevation_map = current_point_cloud.elevation_map
+        # self.elevation_map = self.sequence_graph.global_elevation_map
+        # self.grid_resolution = current_point_cloud.grid_resolution
+        # self.offset_x, self.offset_y, self.min_height = current_point_cloud.get_elevation_map_info()
 
-        self.agent = Agent(self.elevation_map,
-                           grid_resolution=self.grid_resolution,
-                           elevation_x_offset=self.offset_x,
-                           elevation_y_offset=self.offset_y,
-                           min_height=self.min_height,
+        # assert 0 <= start_location[0] <= self.elevation_map_size or 0 <= start_location[1] <= self.elevation_map_size, f'Startting cooridnate should be within the boundaries of the elevation map({self.elevation_map_size}x{self.elevation_map_size}:{start_location})'
+        # assert 0 <= start_location[0] <= self.elevation_map_size or 0 <= start_location[1] <= self.elevation_map_size, f'Startting cooridnate should be within the boundaries of the elevation map({self.self.elevation_map_size}x{self.elevation_map_size})'
+        # assert 0 <= target_location[0] <= self.elevation_map_size or 0 <= target_location[1] <= self.elevation_map_size, f'Target cooridnate should be within the boundaries of the elevation map({self.elevation_map_size}x{self.elevation_map_size})'
+
+        self.agent = Agent(node = self.current_node,
                            start_location=start_location)
+    
         
-        # visualize_3d(point_cloud)
-
+    def get_node_from_sequence_graph(self, agent_location):
+        """
+        TODO(jiwon) : get node given the agent coordinate
+        """
+        agent_x, agent_z = agent_location
+        return self.sequence_graph.get_node(agent_x, agent_z)
 
     def translate_elevation_index(self, x, y):
         return (self.grid_resolution * (x + self.offset_x), self.grid_resolution * (y + self.offset_y))

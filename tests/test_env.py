@@ -14,7 +14,7 @@ from src.util.video_helper import images2video
 
 # Sample Sequence Graph
 node1 = Node('sec2', 'sec2')
-sequenceGraph = BeogymSequenceGraph(global_point_cloud='global_pcd.pcd', initial_nodes=node1)
+sequenceGraph = BeogymSequenceGraph(global_point_cloud='global_pcd.pcd', initial_nodes=[node1])
 
 
 

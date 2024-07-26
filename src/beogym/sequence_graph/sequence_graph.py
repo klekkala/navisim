@@ -24,7 +24,7 @@ class Node:
         sector_boundary(): polygon boundary of each sector
     '''
 
-    def __init__(self, id, sector_name):
+    def __init__(self, id, sector_name, grid_resolution = 10):
         '''
         :param id: id of the sector of the point cloud
         :param sector_name: name of sector of this node
@@ -32,12 +32,19 @@ class Node:
         self.node_id = id
         sector_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, sector_name)
         self.splat_file_path = os.path.join(sector_path, 'point_cloud.ply')
+        self.guassian_splat = o3d.io.read_point_cloud(self.splat_file_path)
 
-        self.point_cloud = o3d.io.read_point_cloud(self.splat_file_path)
-        self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation = get_elevation_map(self.point_cloud)
-        self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0.175)
+        #TODO(jiwon) update point cloud to use
+        #TODO(Hao Peng) change the file name
+        point_cloud_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, 'surfaceMap_clean.pcd')
+        self.global_point_cloud = get_point_cloud(point_cloud_path)
+        self.global_elevation_map, self.offset_x, self.offset_y, self.min_height = get_elevation_map(point_cloud=self.global_point_cloud, grid_resolution=grid_resolution)
+        self.grid_resolution = grid_resolution
+
+        # self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation = get_elevation_map(self.guassian_splat)
+        # self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0.175)
         self.transformation_matrix = self._get_transformation_matrix(os.path.join(sector_path, 'transformation.txt'))
-        self.sector_boundary = self._get_boundary_polygon(occupancy_map=self.occupancy_map)
+        # self.sector_boundary = self._get_boundary_polygon(occupancy_map=self.occupancy_map)
 
     def _get_boundary_polygon(self, occupancy_map, level=0.5, disk_size=5):
         """
@@ -100,18 +107,17 @@ class BeogymSequenceGraph(nx.Graph):
     for managing nodes and edges specific to the Beogym simulation requirements.
 
     Attributes:
-        self.global_point_cloud_path = path to the global point cloud file
+        self.elevation_map = path to the global elevation map (TODO: only used temporarily until we get elevation map for each sector)
         self.current_node = node in sequence graph that the agent is currently residing
     """
 
-    def __init__(self, global_point_cloud, initial_nodes=None, *args, **kwargs):
+    def __init__(self, global_point_cloud, initial_nodes=None, grid_resolution = 10, *args, **kwargs):
         """
         :param global_point_cloud(str) : Name of the global point cloud data file
         :param initial_nodes(list of nodes): A list containining nodes for the initial sequence graph
         :param initial_edges(list of tuple(node, node)): A list containing edges for the initial sequence graph
         """
         super().__init__(*args, **kwargs)
-        self.global_point_cloud_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, global_point_cloud)
 
         if initial_nodes:
             for node in initial_nodes:
@@ -130,7 +136,12 @@ class BeogymSequenceGraph(nx.Graph):
         elevation_map, occupancy_map = None, None
 
         # TODO(jiwon): retrieve current node from the nodes available
-        current_node = self.nodes[0]
+        if not self.current_node:
+            print(self.nodes)
+            current_node = list(self.nodes)[0]
+        else:
+            # TODO(jiwon) : reduce search scope by using the adjcant nodes to the current node as agent cannot jump
+            print('')
         return current_node
 
     def add_edge_to_existing_nodes(self, node: Node):
