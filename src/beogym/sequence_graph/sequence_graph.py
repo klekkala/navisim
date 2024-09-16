@@ -1,11 +1,12 @@
 from skimage.morphology import binary_dilation, disk
 from skimage.measure import find_contours
 from shapely.geometry import Polygon
-from src.beogym.visualization import point_cloud_to_occupany_map
-from src.beogym.pointcloud.pointcloud import *
+from beogym.visualization import point_cloud_to_occupany_map
+from beogym.pointcloud.pointcloud import *
 
-from src.paths import *
+from paths import *
 
+import logging
 import open3d as o3d
 import os
 import networkx as nx
@@ -119,6 +120,7 @@ class BeogymSequenceGraph(nx.Graph):
         """
         super().__init__(*args, **kwargs)
 
+        #TODO(jiwon-hae): Needs to map each node to another using the edge information
         if initial_nodes:
             for node in initial_nodes:
                 self.add_node(node)
@@ -127,11 +129,13 @@ class BeogymSequenceGraph(nx.Graph):
         # self.save()
         self.current_node = None
 
-    # TODO(jiwon-hae) : Implement get_node to return the node that agent is currently residing
+    # TODO(jiwon-hae) : Implement get_node to return the node that agent is currently located
     def get_node(self, coo_x, coo_z):
         """
         Get node in the sequence graph given agent's global x and z coordinate
-        :return Node
+        :param coo_x : x coordinate of the agent
+        :param coo_z : x coordinate of the agent
+        :rtype Node: returns the node that the agent is currently located
         """
         elevation_map, occupancy_map = None, None
 
@@ -152,7 +156,6 @@ class BeogymSequenceGraph(nx.Graph):
 
             R_inv = np.linalg.inv(R)
             t_inv = -np.dot(R_inv, t)
-
             T_inv = np.vstack((R_inv, t_inv))
             return T_inv
 
@@ -197,6 +200,7 @@ class BeogymSequenceGraph(nx.Graph):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         save_path = os.path.join(current_dir, '..', 'cache',
                                  'beogym_sequence_graph.pkl') if not save_path else save_path
+        logging.info(f'SequenceGraph saved at {save_path}')
         with open(save_path, "wb") as f:
             pickle.dump(self, f)
 
