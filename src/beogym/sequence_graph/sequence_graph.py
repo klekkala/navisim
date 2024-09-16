@@ -1,10 +1,10 @@
 from skimage.morphology import binary_dilation, disk
 from skimage.measure import find_contours
 from shapely.geometry import Polygon
-from beogym.visualization import point_cloud_to_occupany_map
-from beogym.pointcloud.pointcloud import *
+from src.beogym.visualization import point_cloud_to_occupany_map
+from src.beogym.pointcloud.pointcloud import *
 
-from paths import *
+from src.paths import *
 
 import logging
 import open3d as o3d
@@ -196,11 +196,12 @@ class BeogymSequenceGraph(nx.Graph):
         """
         super().add_node(node)
 
-    def save(self, save_path=None):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        save_path = os.path.join(current_dir, '..', 'cache',
-                                 'beogym_sequence_graph.pkl') if not save_path else save_path
+    def save(self, graph_name='beogym_sequence_graph.pkl'):
+        os.makedirs(SEQUENCE_GRAPH_FOLDER, exist_ok=True)
+        save_path = os.path.join(SEQUENCE_GRAPH_FOLDER, graph_name)
+
         logging.info(f'SequenceGraph saved at {save_path}')
+
         with open(save_path, "wb") as f:
             pickle.dump(self, f)
 
