@@ -1,12 +1,15 @@
 from skimage.morphology import binary_dilation, disk
 from skimage.measure import find_contours
 from shapely.geometry import Polygon
+from pathlib import Path
+
+import sys
+sys.path.append('/home/student/motion_model/jiwon/navisim')
+
 from src.beogym.visualization import point_cloud_to_occupany_map
 from src.beogym.pointcloud.pointcloud import *
-
 from src.paths import *
 
-import logging
 import open3d as o3d
 import os
 import networkx as nx
@@ -25,27 +28,51 @@ class Node:
         sector_boundary(): polygon boundary of each sector
     '''
 
-    def __init__(self, id, sector_name, grid_resolution = 10):
+    def __init__(self, id, grid_resolution = 10):
         '''
         :param id: id of the sector of the point cloud
         :param sector_name: name of sector of this node
         '''
-        self.node_id = id
-        sector_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, sector_name)
-        self.splat_file_path = os.path.join(sector_path, 'point_cloud.ply')
-        self.guassian_splat = o3d.io.read_point_cloud(self.splat_file_path)
-
-        #TODO(jiwon) update point cloud to use
-        #TODO(Hao Peng) change the file name
-        point_cloud_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, 'surfaceMap_clean.pcd')
-        self.global_point_cloud = get_point_cloud(point_cloud_path)
-        self.global_elevation_map, self.offset_x, self.offset_y, self.min_height = get_elevation_map(point_cloud=self.global_point_cloud, grid_resolution=grid_resolution)
+        self.id = id
         self.grid_resolution = grid_resolution
+        self.sector_name = f'sec{id}'
+        sector_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, self.sector_name)
 
-        # self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation = get_elevation_map(self.guassian_splat)
-        # self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0.175)
-        self.transformation_matrix = self._get_transformation_matrix(os.path.join(sector_path, 'transformation.txt'))
-        # self.sector_boundary = self._get_boundary_polygon(occupancy_map=self.occupancy_map)
+        splat_file_path = Path(sector_path) / 'point_cloud.ply'
+        self.guassian_splat_numpy = np.asarray(o3d.io.read_point_cloud(splat_file_path.as_posix()).points)
+        self.guassian_splat = o3d.geometry.PointCloud()
+        self.guassian_splat.points = o3d.utility.Vector3dVector(self.guassian_splat_numpy)
+
+
+        #TODO(Hao Peng) change the file name
+        #TODO(Jiwon) : replace path with Path(GAUSSIAN_SPLAT_FOLDER) / 'surfaceMap_clean.ply' upon receiving resources
+        point_cloud_path = Path(sector_path) / 'point_cloud.ply'
+        self.point_cloud = o3d.io.read_point_cloud(point_cloud_path.as_posix())
+        
+        self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation, self.min_bound= get_elevation_map(self.point_cloud, height_limit=3.5, scale_factor=5)
+        self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0.175)
+
+        matrix_path = Path(sector_path) / 'transformation.txt'
+        self.transformation_matrix = self._get_transformation_matrix(matrix_path.as_posix())
+        self.sector_boundary = self._get_boundary_polygon(occupancy_map=self.occupancy_map)
+
+        self._attributes_to_ignore = ['guassian_splat', 'point_cloud']
+    
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        for attr in self._attributes_to_ignore:
+            if attr in state:
+                del state[attr]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.point_cloud = None
+        self.guassian_splat = o3d.geometry.PointCloud()
+        self.guassian_splat.points = o3d.utility.Vector3dVector(self.guassian_splat_numpy)
+
+    def __str__(self):
+        return f'Node : {self.id}, {self.sector_name}, {self.sector_boundary}'
 
     def _get_boundary_polygon(self, occupancy_map, level=0.5, disk_size=5):
         """
@@ -129,6 +156,7 @@ class BeogymSequenceGraph(nx.Graph):
         # self.save()
         self.current_node = None
 
+
     # TODO(jiwon-hae) : Implement get_node to return the node that agent is currently located
     def get_node(self, coo_x, coo_z):
         """
@@ -200,15 +228,14 @@ class BeogymSequenceGraph(nx.Graph):
         os.makedirs(SEQUENCE_GRAPH_FOLDER, exist_ok=True)
         save_path = os.path.join(SEQUENCE_GRAPH_FOLDER, graph_name)
 
-        logging.info(f'SequenceGraph saved at {save_path}')
-
         with open(save_path, "wb") as f:
             pickle.dump(self, f)
 
-
-def load_saved_sequence_graph(graph_name):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    graph_path = os.path.join(current_dir, '..', 'cache', graph_name)
+def load_saved_sequence_graph(graph_name='beogym_sequence_graph.pkl'):
+    graph_path = os.path.join(SEQUENCE_GRAPH_FOLDER, graph_name)
     with open(graph_path, "rb") as f:
         return pickle.load(f)
 
+
+graph = BeogymSequenceGraph(global_point_cloud=None)
+graph.save()

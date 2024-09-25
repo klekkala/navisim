@@ -21,3 +21,6 @@ src/data/pano_images
 .DS_Store
 
 hd5_files/
+
+# Pickle file
+*.pkl
