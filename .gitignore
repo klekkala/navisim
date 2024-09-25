@@ -1,0 +1,26 @@
+# IntelliJ files
+*.idea
+
+# Virtual environment
+venv/
+
+# Cached files
+__pycache__
+
+# Images
+src/data/cam_images
+src/data/cropped_pano_images
+src/data/pano_images
+
+# Gaussian Splat file
+*.ply
+*.pcd
+
+
+# Mac files
+.DS_Store
+
+hd5_files/
+
+# Pickle file
+*.pkl

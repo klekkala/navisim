@@ -1,0 +1,14 @@
+{   
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./tests",
+        "-p",
+        "*test.py"
+    ],
+    "python.analysis.indexing": true,
+    "python.analysis.autoImportCompletions": true,
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true,
+}
