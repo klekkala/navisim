@@ -40,6 +40,13 @@ class BeoGym(gym.Env):
         self.agent = Agent(node = self.current_node,
                            start_location=start_location)
     
+    def get_node_from_sequence_graph(self, agent_location):
+        """
+        TODO(jiwon) : get node given the agent coordinate
+        """
+        agent_x, agent_z = agent_location
+        return self.sequence_graph.get_node(agent_x, agent_z)
+
         
     def translate_elevation_index(self, x, y):
         return (self.grid_resolution * (x + self.offset_x), self.grid_resolution * (y + self.offset_y))

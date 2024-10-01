@@ -39,25 +39,22 @@ class Node:
         sector_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, self.id)
 
         #TODO rollback
-        #splat_file_path = Path(sector_path) / 'point_cloud.ply'
-        splat_file_path = Path(GAUSSIAN_SPLAT_FOLDER) / 'surfaceMap.pcd'
-        
+        splat_file_path = Path(sector_path) / 'point_cloud.ply'
         self.guassian_splat_numpy = np.asarray(o3d.io.read_point_cloud(splat_file_path.as_posix()).points)
         self.guassian_splat = o3d.geometry.PointCloud()
         self.guassian_splat.points = o3d.utility.Vector3dVector(self.guassian_splat_numpy)
 
-
         #TODO(Hao Peng) change the file name
         #TODO(Jiwon) : replace path with Path(GAUSSIAN_SPLAT_FOLDER) / 'surfaceMap_clean.ply' upon receiving resources
-        point_cloud_path = Path(sector_path) / 'point_cloud.ply'
+        point_cloud_path = Path(GAUSSIAN_SPLAT_FOLDER) / 'surfaceMap.pcd'
         self.point_cloud = o3d.io.read_point_cloud(point_cloud_path.as_posix())
         
-        self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation, self.min_bound= get_elevation_map(self.point_cloud, height_limit=3.5, grid_resolution=5)
-        self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0.175)
+        self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation = get_elevation_map(self.point_cloud, height_limit=3.5, grid_resolution=5)
+        self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0)
 
         matrix_path = Path(sector_path) / 'transformation.txt'
         self.transformation_matrix = self._get_transformation_matrix(matrix_path.as_posix())
-        self.sector_boundary = self._get_boundary_polygon(occupancy_map=self.occupancy_map)
+        # self.sector_boundary = self._get_boundary_polygon(occupancy_map=self.occupancy_map)
 
         self._attributes_to_ignore = ['guassian_splat', 'point_cloud']
     
@@ -77,13 +74,14 @@ class Node:
     def __str__(self):
         return f'Node : {self.id}, {self.sector_name}, {self.sector_boundary}'
 
-    def _get_boundary_polygon(self, occupancy_map, level=0.5, disk_size=5):
+    def _get_boundary_polygon(self, occupancy_map, level=0.5, disk_size=1):
         """
         Generate a boundary polygon for all coordinates with value 1 in the occupancy map.
 
         :param occupancy_map: 2D numpy array, Occupancy map with binary values (0 and 1).
         :return: Polygon, Shapely Polygon object representing the boundary.
         """
+        print(occupancy_map)
         dilated_map = binary_dilation(occupancy_map, disk(disk_size))
         contours = find_contours(dilated_map, level=level)
         max_contour = max(contours, key=len)
