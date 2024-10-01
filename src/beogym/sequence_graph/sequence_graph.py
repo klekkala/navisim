@@ -36,9 +36,12 @@ class Node:
         self.id = id
         self.grid_resolution = grid_resolution
         self.sector_name = f'sec{id}'
-        sector_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, self.sector_name)
+        sector_path = os.path.join(GAUSSIAN_SPLAT_FOLDER, self.id)
 
-        splat_file_path = Path(sector_path) / 'point_cloud.ply'
+        #TODO rollback
+        #splat_file_path = Path(sector_path) / 'point_cloud.ply'
+        splat_file_path = Path(GAUSSIAN_SPLAT_FOLDER) / 'surfaceMap.pcd'
+        
         self.guassian_splat_numpy = np.asarray(o3d.io.read_point_cloud(splat_file_path.as_posix()).points)
         self.guassian_splat = o3d.geometry.PointCloud()
         self.guassian_splat.points = o3d.utility.Vector3dVector(self.guassian_splat_numpy)
@@ -49,7 +52,7 @@ class Node:
         point_cloud_path = Path(sector_path) / 'point_cloud.ply'
         self.point_cloud = o3d.io.read_point_cloud(point_cloud_path.as_posix())
         
-        self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation, self.min_bound= get_elevation_map(self.point_cloud, height_limit=3.5, scale_factor=5)
+        self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation, self.min_bound= get_elevation_map(self.point_cloud, height_limit=3.5, grid_resolution=5)
         self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0.175)
 
         matrix_path = Path(sector_path) / 'transformation.txt'
@@ -235,7 +238,3 @@ def load_saved_sequence_graph(graph_name='beogym_sequence_graph.pkl'):
     graph_path = os.path.join(SEQUENCE_GRAPH_FOLDER, graph_name)
     with open(graph_path, "rb") as f:
         return pickle.load(f)
-
-
-graph = BeogymSequenceGraph(global_point_cloud=None)
-graph.save()

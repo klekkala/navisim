@@ -202,7 +202,6 @@ def get_elevation_map(point_cloud, height_limit=10, grid_resolution=10):
 
     point_cloud_np = np.asarray(point_cloud.points)
 
-
     min_bound = np.rint(point_cloud.get_min_bound()).astype(int)
     max_bound = np.rint(point_cloud.get_max_bound()).astype(int)
 
