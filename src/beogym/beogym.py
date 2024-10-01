@@ -3,8 +3,10 @@ from gymnasium import spaces
 import cv2
 import os
 import numpy as np
+from src.beogym.game_window import *
 from src.beogym.pointcloud.pointcloud import *
 from src.beogym.visualization import *
+
 # from pointcloud.elevation_map.elevation_map_3d_visualization import visualize_3d
 import matplotlib.pyplot as plt
 from src.agent.agent import Agent
@@ -38,7 +40,6 @@ class BeoGym(gym.Env):
         self.agent = Agent(node = self.current_node,
                            start_location=start_location)
     
-        
     def get_node_from_sequence_graph(self, agent_location):
         """
         TODO(jiwon) : get node given the agent coordinate
@@ -46,19 +47,17 @@ class BeoGym(gym.Env):
         agent_x, agent_z = agent_location
         return self.sequence_graph.get_node(agent_x, agent_z)
 
+        
     def translate_elevation_index(self, x, y):
         return (self.grid_resolution * (x + self.offset_x), self.grid_resolution * (y + self.offset_y))
-
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.agent.reset()
         return self._get_obs()
 
-
     def _get_obs(self):
         return {"agent": self.agent.global_pose, "target": self._target_location}
-
 
     def _get_info(self):
         agent_location_x_z = np.array([self.agent.global_pose[0], self.agent.global_pose[2]])
@@ -66,29 +65,27 @@ class BeoGym(gym.Env):
             "distance": np.linalg.norm(agent_location_x_z - self._target_location, ord=1)
         }
 
-
     def is_terminated(self, pose):
         print("Collision status: ", self.agent.isCollided)
-        return self.agent.isCollided
-        agent_current_coo = pose[[0, 2]].astype(int)
-        has_reached_target_loc = np.array_equal(agent_current_coo, self._target_location)
+        
+        def is_within_tolerance(value1, value2, tolerance = 0.2):
+            return abs(value1 - value2) <= tolerance
 
-        collided = self.is_collided(pose)
-
-        if has_reached_target_loc:
+        if is_within_tolerance(self._target_location[0], pose[0]) and is_within_tolerance(self._target_location[1], pose[2]):
             print('Reached target location')
-        
-        if collided:
+            return True
+        elif self.agent.isCollided:
             print('Agent collided')
-        
-        return has_reached_target_loc or collided
-
+            return True
+        else:
+            return False
 
     def step(self, action):
         estimated_pose = self.agent.take_action(action)
 
-        x, y, z = estimated_pose[:3]
-        self.check_graph((x,y,z))
+        # # Make below more efficient.
+        # x, y, z = estimated_pose[:3]
+        # self.check_graph((x,y,z))
 
         # An episode is done iff the agent has reached the target
         terminated = self.is_terminated(estimated_pose)
@@ -99,67 +96,12 @@ class BeoGym(gym.Env):
 
         return observation, reward, terminated, truncated, info
 
-
-    def process_keyboard_input(self):
-        terminate = False
-
-        class KeyMap:
-            left = ord('a')
-            right = ord('d')
-            forward = ord('w')
-            reverse = ord('s')
-            terminate = ord('k')
-
-        print("Enter operation (Left, Right, Forward, Reverse, K to kill): ")
-        key = cv2.waitKeyEx(0)
-        
-        action = [0, 0]
-        if key == KeyMap.left:
-            print("Turn Left")
-            action = [1, -1]
-        elif key == KeyMap.right:
-            print("Turn Right")
-            action = [-1, 1]
-        elif key == KeyMap.forward:
-            print("Moving Forward")
-            action = [1, 1]
-        elif key == KeyMap.reverse:
-            print("Moving Reverse")
-            action = [-1, -1]
-        elif key == KeyMap.terminate:
-            print("Terminating...")
-            terminate = True
-
-        self.step(action)
-        return terminate
-
-
-    def display_image(self, image_path):
-        try:
-            if os.path.exists(image_path):
-                image = cv2.imread(image_path)
-                if image is not None:
-                    window_title = f'Image Window - Step {self.agent.curr_step}'
-                    cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)  # Create a resizable window
-                    cv2.resizeWindow(window_title, 640, 480)  # Resize the window to 640x480 pixels
-                    cv2.moveWindow(window_title, 1920 - 640, (1080 - 480) // 2)
-                    cv2.imshow(window_title, image)
-                    cv2.waitKey(1)  # Refresh to display the image
-                else:
-                    print(f"Failed to load image at {image_path}")
-            else:
-                print(f"No file found at {image_path}")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-
     def check_graph(self, agent_coordinates):
         x, y, z = agent_coordinates
         
         bound_x1, bound_y1, bound_x2, bound_y2 = self.current_node.boundary
         if bound_x1 >= x or bound_y1 >= z or bound_x2 <= x or bound_y2 <= z:
             self.update_agent_and_env(list(self.sequence_graph.neighbors(self.current_node))[0])
-
 
     # TODO(jiwon) : update scene and the splat file
     def update_agent_and_env(self, node):
@@ -170,35 +112,72 @@ class BeoGym(gym.Env):
         offset_x, offset_y, min_height = current_point_cloud.get_elevation_map_info()
         self.agent.updateScene(elevation_map, offset_x, offset_y)
 
+    def process_keyboard_input(self, window):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                window.running = False
+            
+            # Check for key presses
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
+                    print("Quit key (Q) pressed")
+                    window.running = False  # Quit the loop
+                else:
+                    if event.key == pygame.K_w:
+                        # print("Moving Forward")
+                        action = [1, 1]
+                    elif event.key == pygame.K_a:
+                        # print("Moving Left")
+                        action = [1, -1]
+                    elif event.key == pygame.K_s:
+                        # print("Moving Reverse")
+                        action = [-1, -1]
+                    elif event.key == pygame.K_d:
+                        # print("Moving Right")
+                        action = [-1, 1]
+                    else:
+                        action = [0, 0]
+                    self.step(action)
 
     def render(self):
+        import time
         if self.render_mode == "human":
-            while True:
-                terminate_program = self.process_keyboard_input()
-                cv2.destroyAllWindows()
-                plt.close('all')
-                if terminate_program:
-                    break
-                else:
-                    self.agent.render_camera()
-                    image_path = './src/assets/gaussian_output/images/' + str(self.agent.curr_step) + '.png'
-                    self.display_image(image_path)
+            if (True):
+                window = GameWindow()
+                while window.running:
+                    if (self.last_step != self.agent.curr_step):
+                        print()
+                        start_time = time.time()
+                        self.last_step = self.agent.curr_step
 
-                    plot_elevation_map(elevation_map=self.elevation_map,
-                                       withCV2=True,
-                                       shift_x= self.offset_x,
-                                       shift_y = self.offset_y,
-                                       grid_resolution=self.grid_resolution,
-                                       agent_location=self.agent.agent_path,
-                                       save_path=f'./src/output/elevation')
+                        tensorImg = self.agent.render_camera()
+                        render_time = time.time() - start_time
+                        print(f"Rendering time: {render_time}")
+                        
+                        elevImg = plot_elevation_map_io(elevation_map=self.elevation_map,
+                                        saveOnly=True,
+                                        shift_x= self.offset_x,
+                                        shift_y = self.offset_y,
+                                        grid_resolution=self.grid_resolution,
+                                        agent_location=self.agent.agent_path,
+                                        save_path=f'./src/output/elevation')
+                        
+                        # elevImg = None
+                        window.display_images(tensorImg, elevImg)
 
-                    # plot_occupnacy_map(occupancy_map=self.elevation_map,
-                    #                    withCV2=True,
-                    #                    shift_x= self.offset_x,
-                    #                    shift_y = self.offset_y,
-                    #                    grid_resolution=self.grid_resolution,
-                    #                    agent_location=self.agent.agent_path,
-                    #                    save_path=f'./src/output/occupancy')
+                        # Calculate the elapsed time
+                        end_time = time.time()
+                        elapsed_time = end_time - start_time
+                        fps = 1 / elapsed_time if elapsed_time > 0 else 0  # Added a check to avoid division by zero
+                        print()
+                        print(f"Total Seconds: {elapsed_time}")
+                        print(f"Frames per second: {fps}")
+                        print()
+
+                    self.process_keyboard_input(window)
+                window.quit()
+            else:
+                pass
         else:
             self.agent.render_camera()
 

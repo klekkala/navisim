@@ -17,7 +17,6 @@ node1 = Node('sec2', 'sec2')
 sequenceGraph = BeogymSequenceGraph(global_point_cloud='global_pcd.pcd', initial_nodes=[node1])
 
 
-
 target_location = np.array([10, 0]) #np.zeros(2, dtype = int)
 start_location = np.array([-80, 158]) #np.zeros(2, dtype = int)
 env = BeoGym(config={}, sequence_graph = sequenceGraph, start_location=start_location, target_location = target_location, render_mode="human")

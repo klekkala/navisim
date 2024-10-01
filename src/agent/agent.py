@@ -30,11 +30,12 @@ class Agent:
         self.elevation_y_offset = node.offset_y
         self.grid_resolution = node.grid_resolution
         self.min_height = node.min_height
+        self.trans_matrix = node.transformation_matrix
 
         # Motion Model Initialization
         self.metadata = {"render_modes": ["human", "rgb_array"], "agent_size": 0.75, "agent_height": 1.75}
         self.current_vl = 0  # The initial velocity of the left wheel
-        self.current_vr = 0  # The initial velocity of the left wheel
+        self.current_vr = 0  # The initial velocity of the right wheel
         self.agent_size = self.metadata["agent_size"]
         self.agent_height = self.metadata["agent_height"]
         self.agent_path = []
@@ -51,27 +52,22 @@ class Agent:
     def reset(self, pos=None):
         self.curr_step = 0
         start_x, start_z = self.start_location
-        self.global_pose = [start_x, 0, start_z, 0, 0, np.pi]
-        self.local_pose = [0, 0, 0, 0, 0, np.pi]
+        self.global_pose = [start_x, 0, start_z, 0, 0, 0]
+        self.local_pose = [0, 0, 0, 0, 0, 0]
         self.agent_path = []
-
-    # Above contains all functions related to initializations of Agent
-    # ----------------------------------------------------------------------------------------------------------
 
     # Help accessing elevation data from global elevation map.
     def returnElevationData(self, x, y):
         elevation_x = self.grid_resolution * np.abs(int(x) - self.elevation_x_offset)
         elevation_y = self.grid_resolution * np.abs(int(y) - self.elevation_y_offset)
-
         return self.elevation_map[elevation_x][elevation_y]
-    
+
     # Generates images using gaussian splatting according to current local pose.
     def render_camera(self):
-        render_path = os.path.join(self.render_output_path, self.render_output_folderName, "images")
-        makedirs(render_path, exist_ok=True)
-
-        camera = create_camera()
-        render_pose(camera, self.gaussians, self.background, render_path, self.local_pose, self.curr_step)
+        if self.last_step != self.curr_step:
+            self.last_step = self.curr_step
+            camera = create_camera()
+            return render_pose(camera, self.gaussians, self.background, self.local_pose)
 
     # Take action function for RL environment.
     def take_action(self, action):
@@ -88,13 +84,17 @@ class Agent:
 
         self.local_pose = self.estimate_pose(time_elapsed, self.local_pose)
         self.update_global_pose()
+
+        # Update local pose again for the y (elevation), roll, and pitch, and yaw.
+        # The below code needs to be changed
         self.local_pose[1] = -self.global_pose[1] / 10
         # self.local_pose[1] = 2
 
         self.curr_step += 1
 
         # update path for visualizations
-        self.agent_path.append([self.global_pose[0], self.global_pose[2], self.global_pose[1]])
+        # x, z, y, yaw
+        self.agent_path.append([self.global_pose[0], self.global_pose[2], self.global_pose[1], self.global_pose[5]])
 
         if (len(self.agent_path) >= 2 and ((self.agent_path[-1][2] - self.agent_path[-2][2]) > 0.2)):
             self.isCollided = True
@@ -104,39 +104,29 @@ class Agent:
         print("Current Local Pose: ", self.local_pose)
         print("time_elapsed: ", time_elapsed)
         return self.global_pose
-    
+
     # not sure about this function is necessary
     def updateScene(self, elevation_map, offset_x, offset_y):
         #TODO update scene
         return
-    # ----------------------------------------------------------------------------------------------------------
-    
+
+
     def update_global_pose(self):
-        # Temporary trans. Needs to dynamically reads the trans later if when switching sectors
+        R = self.trans_matrix[:3]
+        t = self.trans_matrix[-1]
 
-        # Splat 1
-        trans = np.array([
-            [-7.28487262e-01,  3.00009073e-03,  6.85052778e-01],
-            [-1.47005104e-02, -9.99828607e-01, -1.12539621e-02],
-            [ 6.84901602e-01, -1.82689935e-02,  7.28406507e-01],
-            [-7.27663079e+01, -4.59237964e+00,  1.74163156e+02]
-        ])
-
-        # Splat 2
-        # trans = np.array([
-        #     [ 9.67962430e-01,  8.61912865e-02,  2.35838497e-01],
-        #     [ 6.23014016e-02, -9.92310474e-01,  1.06950734e-01],
-        #     [ 2.43243232e-01, -8.88312230e-02, -9.65889095e-01],
-        #     [-6.85761898e+01, -4.74879110e+00,  1.86610921e+02]
-        # ])
-        
-        translations = np.dot(trans[:-1], np.array([self.local_pose[0], self.local_pose[1], self.local_pose[2]])) + trans[-1]
+        translations = np.dot(R, np.array([self.local_pose[0], self.local_pose[1], self.local_pose[2]])) + t
+        yaw = np.arctan2(R[0, 2], R[2, 2])
+        roll = np.arctan2(R[2, 1], R[0, 2])
+        # # roll = np.arctan2(rotation_matrix[2, 1], rotation_matrix[2, 0])
 
         self.global_pose[0] = translations[0] # x
         self.global_pose[2] = translations[2] # z
         self.global_pose[1] = self.returnElevationData(self.global_pose[0], self.global_pose[2]) # y
 
-        self.global_pose[5] = self.local_pose[5]
+        self.global_pose[5] = yaw - self.local_pose[5]
+
+        # The below code is acutally not even applied..
         self.global_pose[3] = self.estimate_roll(self.global_pose[0], self.global_pose[2], self.agent_size, self.local_pose[5]) % (2 * np.pi)
         self.global_pose[4] = self.estimate_pitch(self.global_pose[0], self.global_pose[2], self.agent_size, self.local_pose[5]) % (2 * np.pi)
 
@@ -216,6 +206,8 @@ class Agent:
         pitch = np.arctan2((front_elevation - rear_elevation), l)
         return pitch
 
+
+
 # Maybe move below code into another file to make the code clean
 # Gaussian Splatting Helpfer Class & Functions
 class CustomModelParams():
@@ -262,25 +254,40 @@ def translate(view, x, y, z):
     view.trans[2] += z  # moving z-axis front and back
     view.update_transforms()
 
-def render_pose(view, gaussians, background, render_path, pose, idx=0):
+def render_pose(view, gaussians, background, pose):
     translate(view, pose[0], pose[1], pose[2])
     rotate(view, pose[3], pose[4], pose[5])
-    rendering = render(view, gaussians, CustomPipeline, background)["render"]
-    torchvision.utils.save_image(rendering, os.path.join(render_path, f"{idx}.png"))
+    tensor = render(view, gaussians, CustomPipeline, background, scaling_modifier=1)["render"]
+
+    # Make sure tensor is between 0 and 1
+    tensor = torch.clamp(tensor, 0, 1)
+
+    # Convert tensor to 0-255 and to byte format on GPU, then transfer to CPU
+    tensor = (tensor * 255).byte().cpu()
+
+    tensor = tensor.permute(1, 2, 0).contiguous()  # Change from CxHxW to HxWxC
+    return tensor
+
+def resize_tensor_img(tensor_img):
+    # Resizing the images before sending to CPU
+    new_height = 109
+    new_width = 196
+    resize_transform = transforms.Resize((new_height, new_width))
+    image_resized = resize_transform(tensor_img.unsqueeze(0))  # Add batch dimension
+    image_resized = image_resized.squeeze(0)  # Remove batch dimension
+    return image_resized
+
+def save_render_disk(tensor_img, render_path, idx):
+    # render_path = os.path.join(self.render_output_path, self.render_output_folderName, "images")
+    # makedirs(render_path, exist_ok=True)
+    torchvision.utils.save_image(tensor_img, os.path.join(render_path, f"{idx}.png"))
+
 
 def create_camera():
-    # rotation = np.array([[0.8761342012188561, 0.06925962026449778, 0.47706599800804744],
-    #                      [-0.04747421839895103, 0.9972110940209488, -0.05758673934988209],
-    #                      [-0.4797239414934442, 0.02780537650095985, 0.8769787916452907]])
-    
-    # rotation = np.array([[0.9802084581685495, 0.00012913566697058749, 0.19796808292958304],
-    #                      [-0.00010434069063855217, 0.9999999853521653, -0.00013567862650630828],
-    #                      [-0.1979680975507292, 0.00011233721079691208, 0.9802084572847227]])
-
-    pitch = np.radians(0)
     yaw = np.radians(0)
-    roll = np.radians(5)
-    
+    pitch = np.radians(0)
+    roll = np.radians(0)
+
     # Rotation matrix for rotation around x-axis
     R_x = np.array([[1, 0, 0],
                     [0, np.cos(pitch), -np.sin(pitch)],
