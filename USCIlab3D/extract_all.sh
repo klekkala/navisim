@@ -1,6 +1,4 @@
-source ~/catkin_ws/devel/setup.bash
-
-
+#!/bin/bash
 if [ $# -eq 0 ]; then
   echo "Error: Please provide an argument."
   exit 1
@@ -13,8 +11,14 @@ do
       if [ "${entry: -4}" != ".bag" ]; then
           continue
       fi
-      echo "${entry}"
-      python3 ./vision_toolkit/extract/read_bag_.py --bag "student@iGpu10:${entry}" --cam "$i" --save $1 --num $index
+      python3 download_bag.py --bag "student@iGpu10:${entry}" --cam "$i" --save $1
       ((index++))
   done
 done
+
+./vision_toolkit/extract/bag_.sh "$1"
+./vision_toolkit/scripts/run_divide.sh "$1"
+./vision_toolkit/scripts/run_LeGO.sh "$1"
+./scripts/all_pcl.sh "$1"
+
+/home/student/navisim/bag_dump
