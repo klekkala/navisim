@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 import argparse
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str)
@@ -57,7 +58,9 @@ for tmp_len in lens:
         sys.exit(1)
 print(lens)
 
-with open(f'/lab/tmpig23b/navisim/data/bag_dump/{args.date}/{args.session}/sector_data.txt', 'w') as sector_data_file:
+with open(f'/lab/tmpig23b/navisim/data/bag_dump/{args.date}/{args.session}/sector_data.json', 'w') as sector_data_file:
+    sector_data_list = []
+
     while True:
         os.makedirs(target_path + 'sector' + str(tra) + '/input', exist_ok=True)
         os.makedirs(target_path + 'sector' + str(tra) + '/gt_dense', exist_ok=True)
@@ -77,11 +80,13 @@ with open(f'/lab/tmpig23b/navisim/data/bag_dump/{args.date}/{args.session}/secto
                 sector_images.append(file_names_all[i][counts[i]])
                 counts[i] += 1
         
-        sector_data_file.write(f"sector{tra}: {', '.join(sector_images)}\n")
+        sector_data_list.append({f"sector{tra}" : sector_images})
 
         tra+=1
         if args.num==tra:
             break
         if sum(done) == 5:
             break
+    
+    json.dump(sector_data_list, sector_data_file, indent = 4)
         

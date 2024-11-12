@@ -20,10 +20,13 @@ def extract_and_call_script(folder_path, interval=1250, script_path="/lab/tmpig1
             subprocess.run(["python" , script_path , image_path , folder_path+'text_gpt4/'])
 
 if __name__ == "__main__":
+    current_path = os.getcwd()
+    target_path = os.path.abspath(os.path.join(current_path, "../.."))
+    
     # Specify the folder containing images and the path to the other script
-    folder_path = "/lab/tmpig10b/kiran/bag_dump/2023_06_24/0/"
-    other_script_path = "/lab/tmpig10c/henghui/vision_gpt4.py"
-
-    # Call the function with the specified parameters
-    extract_and_call_script(folder_path, interval=1250, script_path=other_script_path)
+    folder_path = "/lab/tmpig23b/navisim/data/bag_dump/2023_03_11/0/"
+    script_path = f'{target_path}/3d2d_ann/gpt4/vision_gpt4.py'
+    
+    # # Call the function with the specified parameters
+    extract_and_call_script(folder_path, interval=1250, script_path=script_path)
 

@@ -19,5 +19,5 @@ done
 ./vision_toolkit/extract/bag_.sh "$1"
 ./vision_toolkit/scripts/run_divide.sh "$1"
 ./vision_toolkit/scripts/run_LeGO.sh "$1"
-./vision_toolkit/scripts/run_LeGO_parameter.sh '/lab/tmpig23b/navisim/data/bag_dump/2023_03_11/bags/cam1/test_2023-03-11-11-05-59.bag' 0 "$1"
 ./vision_toolkit/scripts/all_pcl.sh "$1"
+./3d2d_ann/gpt4/extract_and_gpt4.sh "$1"
