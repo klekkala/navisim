@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import open3d as o3d
 import cv2
+print('import 3')
 import pickle, os
 import colorsys
 from collections import Counter
@@ -15,8 +16,10 @@ import argparse
 import json
 import shutil
 import yaml, random
+
 from sklearn.cluster import MeanShift
 from sklearn.cluster import estimate_bandwidth
+
 import fcntl
 import argparse
 import pickle
@@ -203,19 +206,21 @@ def find_closest_file(input_filename, reverse_sync):
 
 
 def run(date, session, data_path, curr, total):
-    folder_path = join('/lab/tmpig13b/kiran/bag_dump/', date, session)
-    img_path = join('/lab/tmpig21d/u/henghui/bag_dump/', date, session, 'all_imgs/')
+    folder_path = join('/lab/tmpig23b/navisim/data/bag_dump/', date, session)
+    img_path = join('/lab/tmpig23b/navisim/data/bag_dump/', date, session, 'all_imgs/')
     if not os.path.exists(img_path):
         print(f"Error: Folder '{folder_path}'img error.")
         return
     pcl_path = join(folder_path, 'all_pcl/')
     json_path = join(folder_path, 'sync_data.json')
 
+    print('1')
     if not os.path.exists(json_path) or not os.path.exists(pcl_path):
         print(f"Error: Folder '{folder_path}'sync error.")
         return
     with open('./extrinsic', 'rb') as file:
         ex_dict = pickle.load(file)
+    print('2')
     with open(json_path, "r") as json_file:
         sync_data = json.load(json_file)
     reverse_sync = []
@@ -260,7 +265,7 @@ def run(date, session, data_path, curr, total):
     part_length = total_length // total
     start_index = (curr - 1) * part_length
     end_index = curr * part_length if curr < total else total_length
-
+    print(CAM1_res.keys())
 
     for cam1 in CAM1_res[start_index:end_index]:
         if cam1+'.jpg' not in cam1_pcd_dict.keys():
@@ -280,20 +285,21 @@ def run(date, session, data_path, curr, total):
         
         proj_dict = {}
         instance = 0
-        if os.path.exists(join('/lab/tmpig10c/acc_data', date, session, pcd_name[:-4], pcd_name)):
+        if os.path.exists(join('/lab/tmpig23b/navisim/data/acc_data', date, session, pcd_name[:-4], pcd_name)):
             continue
 
         for img_name in pcd_img_dict[pcd_name]:
 
             proj_dict, instance = proj(pcd, join(img_path, img_name), join(SAM_path, img_name[:-4]), proj_dict, instance, date, session, ex_dict)
-        os.makedirs(join('/lab/tmpig10c/acc_data', date, session, pcd_name[:-4]), exist_ok=True)
-        label_idx, color_idx, label_inverse = write_ply_point_cloud(join('/lab/tmpig10c/acc_data', date, session, pcd_name[:-4], pcd_name), pcd, intensity, proj_dict, label_idx, color_idx, label_inverse)
-        with open(join('/lab/tmpig10c/acc_data', date, session, pcd_name[:-4], 'imgs.txt'), 'w') as imagef:
+        os.makedirs(join('/lab/tmpig23b/navisim/data/acc_data', date, session, pcd_name[:-4]), exist_ok=True)
+        label_idx, color_idx, label_inverse = write_ply_point_cloud(join('/lab/tmpig23b/navisim/data/acc_data', date, session, pcd_name[:-4], pcd_name), pcd, intensity, proj_dict, label_idx, color_idx, label_inverse)
+        with open(join('/lab/tmpig23b/navisim/data/acc_data', date, session, pcd_name[:-4], 'imgs.txt'), 'w') as imagef:
             for img_name in pcd_img_dict[pcd_name]:
                 imagef.write(img_name)
                 imagef.write('\n')
                 # shutil.copy(join(img_path, img_name), join('/lab/tmpig10c/data_res', date, session, pcd_name[:-4], img_name))
 
+print('core_dump')
 if __name__ == '__main__':
     # run('/lab/tmpig13b/kiran/bag_dump/2023_03_11/0/')
     parser = argparse.ArgumentParser()
@@ -303,5 +309,6 @@ if __name__ == '__main__':
     parser.add_argument('--curr', type=int)
     parser.add_argument('--total', type=int)
     args = parser.parse_args()
-    # run('2023_03_11', '0', '/lab/tmpig13c/henghui/SAM/', curr, )
-    run(args.date, args.session, args.data_path, args.curr, args.total)
+
+    run('2023_03_11', '0', '/lab/tmpig23b/navisim/data/SAM', 0, 1)
+    # run(args.date, args.session, args.data_path, args.curr, args.total)
