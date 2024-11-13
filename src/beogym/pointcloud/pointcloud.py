@@ -4,39 +4,6 @@ from scipy.interpolate import griddata
 from scipy.ndimage import gaussian_filter
 from scipy.spatial import cKDTree
 import scipy.interpolate
-import matplotlib.pyplot as plt
-
-def multiple_pass_interpolation(data, max_passes=5):
-    interpolated = np.copy(data)
-    rows, cols = data.shape
-
-    def interpolate_once(input_data):
-        output_data = np.copy(input_data)
-        for i in range(rows):
-            for j in range(cols):
-                if input_data[i, j] <= 0:
-                    neighbors = []
-                    for x in [i-1, i, i+1]:
-                        for y in [j-1, j, j+1]:
-                            if 0 <= x < rows and 0 <= y < cols:
-                                if input_data[x, y] > 0:
-                                    neighbors.append(input_data[x, y])
-                    if neighbors:
-                        output_data[i, j] = sum(neighbors) / len(neighbors)
-        return output_data
-    
-    for _ in range(max_passes):
-        new_data = interpolate_once(interpolated)
-        if np.array_equal(new_data, interpolated):
-            break
-        interpolated = new_data
-
-    return interpolated
-
-def iterative_interpolation(data, max_iterations=4):
-    for _ in range(max_iterations):
-        data = multiple_pass_interpolation(data)
-    return data
 
 def interpolation(data):
     mask = np.isnan(data)
@@ -151,7 +118,7 @@ def point_cloud_to_height_map(points, grid_lower_bound, grid_width, grid_height,
 
     # Create 2D top-view grid
     _2d_map = np.full((grid_width, grid_height), np.nan)
-    # _2d_map = np.full((grid_width, grid_height), 0)
+    # _2d_map = np.full((grid_width, grid_height), -10)
 
     # Assign elevation values to the grid
     for point in points:
@@ -201,11 +168,10 @@ def get_elevation_map(point_cloud, height_limit=10, grid_resolution=10):
     index_z = 2
 
     point_cloud_np = np.asarray(point_cloud.points)
+    point_cloud_np = smooth_out_point_cloud(point_cloud_np, axis_height=index_y, min_height=-10, max_height=height_limit)
 
     min_bound = np.rint(point_cloud.get_min_bound()).astype(int)
     max_bound = np.rint(point_cloud.get_max_bound()).astype(int)
-
-    point_cloud_np = smooth_out_point_cloud(point_cloud_np, axis_height=index_y, min_height=-10, max_height=height_limit)
 
     grid_width  = (np.abs(max_bound[index_x]) + np.abs(min_bound[index_x])) * grid_resolution
     grid_height = (np.abs(max_bound[index_z]) + np.abs(min_bound[index_z])) * grid_resolution
@@ -213,41 +179,20 @@ def get_elevation_map(point_cloud, height_limit=10, grid_resolution=10):
     # Extract the highest points
     max_height = np.max(point_cloud_np[:, index_y])
     min_height = np.min(point_cloud_np[:, index_y])
-    # min_height = 0
 
-    elevation_map = point_cloud_to_height_map(point_cloud_np, grid_lower_bound=min_bound, grid_width=grid_width,
-                                              grid_height=grid_height, min_height=min_height,
-                                              grid_resolution=grid_resolution)
+    elevation_map = point_cloud_to_height_map(
+        points=point_cloud_np,
+        grid_lower_bound=min_bound,
+        grid_width=grid_width,
+        grid_height=grid_height,
+        min_height=min_height,
+        grid_resolution=grid_resolution
+    )
 
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    # Default values
-    # recommend to be in square shape
-    # x_start, x_end, y_start, y_end = -100, -60, 138, 178
-    # x_start, x_end, y_start, y_end = -130, -20, -20, 80
-
-    # sec1
-    # x_start, x_end = -120, -40
-    # y_start, y_end = 120, 198
-
-    # sec2
-    x_start, x_end = -120, -40
-    y_start, y_end = 160, 220
-
-    elevation_map = crop_elevation_map(elevation_map, (x_start + np.abs(min_bound[index_x])) * grid_resolution, (x_end + np.abs(min_bound[index_x])) * grid_resolution,
-                                                        (y_start + np.abs(min_bound[index_z])) * grid_resolution, (y_end + np.abs(min_bound[index_z])) * grid_resolution)
- 
-    shift_x = x_start
-    shift_y = y_start
-
-    # shift_x = min_bound[index_x]
-    # shift_y = min_bound[index_z]
-
+    # min_elevation = np.min(elevation_map[:, index_y])  # Maybe needed??
     elevation_map = interpolation(elevation_map)
-    # elevation_map = iterative_interpolation(elevation_map)
 
-    min_elevation = np.min(elevation_map[:, index_y])
-    return elevation_map, shift_x, shift_y, min_elevation
+    return elevation_map
 
 def get_coverage_roi(points, invalid_height, coverage):
     '''

@@ -46,11 +46,11 @@ class Node:
 
         #TODO(Hao Peng) change the file name
         #TODO(Jiwon) : replace path with Path(GAUSSIAN_SPLAT_FOLDER) / 'surfaceMap_clean.ply' upon receiving resources
-        point_cloud_path = Path(GAUSSIAN_SPLAT_FOLDER) / 'surfaceMap.pcd'
+        point_cloud_path = Path(sector_path) / 'surfaceMap.pcd'
         self.point_cloud = o3d.io.read_point_cloud(point_cloud_path.as_posix())
         
-        self.elevation_map, self.elevation_shift_x, self.elevation_shift_y, self.min_elevation = get_elevation_map(self.point_cloud, height_limit=3.5, grid_resolution=5)
-        self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0)
+        self.elevation_map = get_elevation_map(self.point_cloud, height_limit=3.5, grid_resolution=5)
+        # self.occupancy_map = point_cloud_to_occupany_map(self.elevation_map, threshold=0)
 
         matrix_path = Path(sector_path) / 'transformation.txt'
         self.transformation_matrix = self._get_transformation_matrix(matrix_path.as_posix())
@@ -140,7 +140,7 @@ class BeogymSequenceGraph(nx.Graph):
         self.current_node = node in sequence graph that the agent is currently residing
     """
 
-    def __init__(self, global_point_cloud, initial_nodes=None, grid_resolution = 10, *args, **kwargs):
+    def __init__(self, initial_nodes=None, grid_resolution = 10, *args, **kwargs):
         """
         :param global_point_cloud(str) : Name of the global point cloud data file
         :param initial_nodes(list of nodes): A list containining nodes for the initial sequence graph

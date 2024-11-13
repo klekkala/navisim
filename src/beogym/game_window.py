@@ -27,6 +27,27 @@ class GameWindow:
         # To track if the window is running
         self.running = True
 
+    def process_keyboard_input(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
+                    print("Quit key (Q) pressed")
+                    self.running = False  # Quit the loop
+                else:
+                    action = [0, 0]
+                    if event.key == pygame.K_w:
+                        action = [1, 1]    # print("Moving Forward")
+                    elif event.key == pygame.K_a:
+                        action = [1, -1]   # print("Moving Left")
+                    elif event.key == pygame.K_s:
+                        action = [-1, -1]  # print("Moving Reverse")
+                    elif event.key == pygame.K_d:
+                        action = [-1, 1]   # print("Moving Right")
+                    return action
+
     # priorizing image1's sizes
     def image_scale(self):
         def helper(width, max_width, height, max_height):
@@ -60,12 +81,12 @@ class GameWindow:
     def display_images(self, image1, image2):
         image1 = self.tensor_to_surface(image1)
         image1 = pygame.transform.scale(image1, (self.image1_width, self.window_height))
-
-        image2 = pygame.image.load(image2)
-        image2 = pygame.transform.scale(image2, (self.image2_width, self.window_height))
-
         self.window.blit(image1, (0, 0))  # Left image at position (0,0)
-        self.window.blit(image2, (self.image1_width, 0))  # Right image starts at the end of the left image
+
+        if (image2):
+            image2 = pygame.image.load(image2)
+            image2 = pygame.transform.scale(image2, (self.image2_width, self.window_height))
+            self.window.blit(image2, (self.image1_width, 0))  # Right image starts at the end of the left image
 
         # Update the display
         pygame.display.flip()

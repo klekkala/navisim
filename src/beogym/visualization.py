@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import open3d as o3d
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from io import BytesIO
 # from scipy.spatial import ConvexHull
 # from scipy.spatial import Delaunay
 
@@ -270,43 +271,20 @@ def point_cloud_to_occupany_map(elevation_map, threshold):
                 temp[i][j] = 0
     return temp
 
-def plot_elevation_map_io(elevation_map, grid_resolution, shift_x, shift_y, save_path, cmap='terrain', saveOnly = False, agent_location=[]):
-    '''
-    Plot and save elevation map 
-
-    :param elevation_map: elevation map of the point cloud
-    :param grid_resolution : resolution used to plot the elevation map
-    :param roi : region of interest used to plot the elevation map
-    :param shift_x: degree of x-coordinate shifted to plot 3d point cloud onto 2d elevation map
-    :param shift_y: degree of y-coordinate shifted to plot 3d point cloud onto 2d elevation map
-    :param agent_location: location of the agent on the elevation map
-    :param save_path: path to save the figure of the elevation map
-    :param cmap: color map used for figure visualization
-    '''
-
-    x_indices = np.arange(elevation_map.shape[0])
-    y_indices = np.arange(elevation_map.shape[1])
-
-    # Update extent for the plot
-    x_indices = x_indices / grid_resolution + shift_x
-    y_indices = y_indices / grid_resolution + shift_y
-    extent = [min(y_indices), max(y_indices), min(x_indices), max(x_indices)]
-    
+def plot_elevation_map_io(elevation_map, cmap='terrain', agent_location=[]):
     # Plot 2D elevation map
     fig, ax = plt.subplots(figsize=(6, 6))
-    im = ax.imshow(elevation_map, cmap=cmap, origin='lower', extent=extent)
+    im = ax.imshow(elevation_map, cmap=cmap, origin='lower')
     plt.colorbar(im, orientation='vertical', label="Elevation")
     ax.set_xlabel("Y coordinate")
     ax.set_ylabel("X coordinate")
     ax.set_title('2D Elevation Map')
-    # ax.invert_yaxis()
-    # ax.invert_xaxis()
-    
+
     # Check if agent_location is provided and plot it
-    if agent_location:
-        for location in agent_location:
-            agent_x, agent_z, agent_y, agent_rotation = location
-            plt.quiver(agent_z, agent_x, np.cos(agent_rotation), np.sin(agent_rotation), scale=17)
+    # if agent_location:
+    #     for location in agent_location:
+    #         agent_x, agent_z, agent_y, agent_rotation = location
+    #         plt.quiver(agent_z, agent_x, np.cos(agent_rotation), np.sin(agent_rotation), scale=17)
 
     buffer = BytesIO()
     plt.savefig(buffer, format='png')
