@@ -24,3 +24,5 @@ hd5_files/
 
 # Pickle file
 *.pkl
+
+assets/
