@@ -35,7 +35,7 @@ def plot_elevation_map(data, ax, title, label, polygon = None):
 
     if polygon:
         x, y = polygon.exterior.xy
-        plt.plot(x, y, color='red', linewidth=2)
+        ax.plot(x, y, color='red', linewidth=2)
 
     ax.set_title(title)
     ax.set_xlabel('X')
@@ -58,7 +58,7 @@ def plot_occupancy_map(data, ax, title, label, polygon = None):
 
     if polygon:
         x, y = polygon.exterior.xy
-        plt.plot(x, y, color='red', linewidth=2)
+        ax.plot(x, y, color='red', linewidth=2)
     
     ax.set_title(title)
     ax.set_xlabel('X')
