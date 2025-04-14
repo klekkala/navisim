@@ -6,7 +6,7 @@ class RocksDB:
     _instance = None
     _lock = threading.Lock()
 
-    def __new__(cls, db_path="../../assets/database", options = None):
+    def __new__(cls, db_path="../assets/rocksdb", options = None):
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
