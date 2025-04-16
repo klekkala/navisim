@@ -24,7 +24,7 @@ def get_sequence(sequence_graph):
     return sectors
 
 
-def plot_elevation_map(data, ax, title, label, polygon = None):
+def plot_elevation_map(data, ax, title, label, polygon = None, position = None):
     im = ax.imshow(
         data,
         cmap='viridis',
@@ -36,6 +36,11 @@ def plot_elevation_map(data, ax, title, label, polygon = None):
     if polygon:
         x, y = polygon.exterior.xy
         ax.plot(x, y, color='red', linewidth=2)
+    
+    if position:
+        x, y = position
+        ax.plot(x, y, marker='o', color='red', markersize=6)
+        ax.text(x + 1, y + 1, f'Agent({x},{y})', color='black', fontsize=8)
 
     ax.set_title(title)
     ax.set_xlabel('X')
@@ -43,7 +48,7 @@ def plot_elevation_map(data, ax, title, label, polygon = None):
     plt.colorbar(im, ax=ax, label=label)
 
 
-def plot_occupancy_map(data, ax, title, label, polygon = None):
+def plot_occupancy_map(data, ax, title, label, polygon = None, position = None):
     """
     Plots a binary occupancy map and saves it to a file.
     """
@@ -60,18 +65,24 @@ def plot_occupancy_map(data, ax, title, label, polygon = None):
         x, y = polygon.exterior.xy
         ax.plot(x, y, color='red', linewidth=2)
     
+
+    if position:
+        x, y = position
+        ax.plot(x, y, marker='o', color='red', markersize=6)
+        ax.text(x + 1, y + 1, f'Agent({x},{y})', color='black', fontsize=8)
+    
     ax.set_title(title)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     plt.colorbar(im, ax=ax, label=label)
 
-def plot_maps(elevation_map, occupancy_map, polygon):
+def plot_maps(elevation_map, occupancy_map, polygon, pos):
     """
     Plots an elevation map on a given Axes object.
     """
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-    plot_elevation_map(elevation_map, axes[0], title = 'Elevation Map', label = 'Elevation', polygon = polygon)
-    plot_occupancy_map(occupancy_map, axes[1], title = 'Occupancy Map', label = 'Occupancy', polygon = polygon)
+    plot_elevation_map(elevation_map, axes[0], title = 'Elevation Map', label = 'Elevation', polygon = polygon, position = pos)
+    plot_occupancy_map(occupancy_map, axes[1], title = 'Occupancy Map', label = 'Occupancy', polygon = polygon, position = pos)
     plt.tight_layout()
     plt.show()
 
