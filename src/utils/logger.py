@@ -1,5 +1,5 @@
 import logging
-import datetime
+from datetime import datetime
 import os
 
 def logging_setup(level=logging.INFO):
