@@ -16,6 +16,8 @@ src/data/pano_images
 *.ply
 *.pcd
 
+# Log Files
+*.log
 
 # Mac files
 .DS_Store
