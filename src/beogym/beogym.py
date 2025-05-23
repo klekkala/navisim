@@ -1,13 +1,12 @@
-import gymnasium as gym
-from gymnasium import spaces
 import cv2
 import os
 import numpy as np
-from src.beogym.game_window import *
-from src.beogym.pointcloud.pointcloud import *
+import gymnasium as gym
+
+from gymnasium import spaces
+from envs.game_window import *
 from src.beogym.visualization import *
 
-# from pointcloud.elevation_map.elevation_map_3d_visualization import visualize_3d
 import matplotlib.pyplot as plt
 from src.agent.agent import Agent
 

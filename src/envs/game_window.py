@@ -1,4 +1,5 @@
 import pygame
+import numpy as np
 from torchvision.transforms import ToPILImage
 
 class GameWindow:
@@ -61,11 +62,26 @@ class GameWindow:
         image1 = self.tensor_to_surface(image1)
         image1 = pygame.transform.scale(image1, (self.image1_width, self.window_height))
 
-        image2 = pygame.image.load(image2)
+        if isinstance(image2, np.ndarray):
+            image2 = self.numpy_to_surface(image2)
+        else:
+            image2 = pygame.image.load(image2)
+
         image2 = pygame.transform.scale(image2, (self.image2_width, self.window_height))
 
-        self.window.blit(image1, (0, 0))  # Left image at position (0,0)
-        self.window.blit(image2, (self.image1_width, 0))  # Right image starts at the end of the left image
-
-        # Update the display
+        self.window.blit(image1, (0, 0))
+        self.window.blit(image2, (self.image1_width, 0))
         pygame.display.flip()
+    
+    def numpy_to_surface(self, elevation_map: np.ndarray) -> pygame.Surface:
+        # Normalize
+        normalized = (elevation_map - np.nanmin(elevation_map)) / (np.nanmax(elevation_map) - np.nanmin(elevation_map))
+        normalized = np.nan_to_num(normalized)
+        grayscale = (normalized * 255).astype(np.uint8)
+
+        # Stack to RGB
+        rgb = np.stack((grayscale,) * 3, axis=-1)
+
+        # Convert to Surface (transpose to (W, H, 3))
+        surface = pygame.surfarray.make_surface(np.transpose(rgb, (1, 0, 2)))
+        return surface

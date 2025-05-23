@@ -3,7 +3,7 @@ import argparse
 
 from pathlib import Path
 # from beogym.beogym import BeoGym
-from data_loader import *
+from experimental.data_loader import *
 from util.logging_util import logging_setup
 
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     seq_path, database_path = check_env(database = args.database, sq_graph = args.seq_graph)
     
     logging.info('**** Navisim Starting ****')
-    sequence_graph = load_sequence_graph(seq_path)
+    # sequence_graph = load_sequence_graph(seq_path)
     NavisimMaster()
 
     
