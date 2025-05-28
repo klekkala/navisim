@@ -1,0 +1,49 @@
+from pathlib import Path
+from submodules.gaussian.arguments import ModelParams
+import torch
+
+class GaussianModelParam(ModelParams):
+    def __init__(self, parser):
+        # Initialize default parameters
+        self.gaussian_model_path: Path = Path()
+        self.sh_degree: int = 3
+        self.bg_color: list[float] = [0.0, 0.0, 0.0]
+        self.dtype = torch.float32
+        self.device: str = "cuda"
+        super().__init__(parser, sentinel=True)
+
+    @classmethod
+    def create(
+        cls,
+        parser,
+        gaussian_model_path: str,
+        sh_degree: int = 3,
+        bg_color: list[float] = [0.0, 0.0, 0.0],
+        dtype=torch.float32,
+        device: str = "cuda",
+    ) -> "GaussianModelParam":
+        """
+        Factory method to create a GaussianModelParam with custom overrides.
+
+        Args:
+            parser: Argument parser or placeholder used by ModelParams.
+            gaussian_model_path (str): Path to the saved Gaussian model.
+            sh_degree (int): Spherical harmonics degree.
+            bg_color (list[float]): Background color.
+            dtype: Torch dtype (default float32).
+            device (str): Device to use (default 'cuda').
+
+        Returns:
+            GaussianModelParam: Configured parameter object.
+        """
+        instance = cls(parser)
+        instance.gaussian_model_path = Path(gaussian_model_path).resolve()
+        instance.sh_degree = sh_degree
+        instance.bg_color = bg_color
+        instance.dtype = dtype
+        instance.device = device
+        return instance
+
+    def extract(self, args):
+        # Optionally override this if needed
+        return super().extract(args)
