@@ -6,3 +6,7 @@ class RelativeDir(Enum):
     OUTSIDE_RIGHT = auto()
     OUTSIDE_BOTTOM = auto()
     OUTSIDE_LEFT = auto()
+
+class RlPolicy(Enum):
+    RANDOM = auto()
+    GREEDY = auto()
