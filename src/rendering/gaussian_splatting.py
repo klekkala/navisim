@@ -4,10 +4,9 @@ import open3d as o3d
 import json
 
 class GaussianSplatting:
-    def __init__(self, seq_id, sector_id, db : RocksDB):
-        self.db = db
+    def __init__(self, seq_id, sector_id):
+        self.db = RocksDB()
         self.gs = self.get_gaussian_splatting(seq_id, sector_id, sector_id)
-        
     
     def get_gaussian_splatting(self, seq_id, sector_id):
         date, session = seq_id.split('/')
