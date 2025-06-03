@@ -1,17 +1,15 @@
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..')))
+
+from typing import Tuple
 from data.rocksdb import RocksDB
 from shapely import wkb
 from shapely.geometry import Point
-from enum import Enum, auto
+from enums.enums import RelativeDir
 
 import math
 import json
-
-class RelativeDir(Enum):
-    INSIDE_OR_ON = auto()
-    OUTSIDE_TOP = auto()
-    OUTSIDE_RIGHT = auto()
-    OUTSIDE_BOTTOM = auto()
-    OUTSIDE_LEFT = auto()
 
 class BoundaryPolygon:
     def __init__(self, seq_id, sector_id):
@@ -58,3 +56,15 @@ class BoundaryPolygon:
         polygon = wkb.loads(data)
 
         return polygon
+
+    def sample_point_within(self) -> Tuple[float, float]:
+        """Uniformly sample a point within the polygon (using rejection sampling)."""
+        from shapely.geometry import Polygon, Point
+        import random
+
+        minx, miny, maxx, maxy = self.polygon.bounds
+
+        while True:
+            x, y = random.uniform(minx, maxx), random.uniform(miny, maxy)
+            if self.polygon.contains(Point(x, y)):
+                return x, y
