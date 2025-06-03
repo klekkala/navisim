@@ -25,7 +25,7 @@ class NavisimScene(Scene):
         self.device = device
 
     @classmethod
-    def create(cls, model_params: GaussianModelParam, camera: NavisimCamera, sector : Sector) -> "NavisimScene":
+    def create(cls, model_params: GaussianModelParam, sector : Sector, camera: NavisimCamera = NavisimCamera.create()) -> "NavisimScene":
         """
         Factory method to create a NavisimScene instance using GaussianModelParam.
 
