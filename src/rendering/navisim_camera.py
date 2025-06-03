@@ -1,4 +1,4 @@
-from submodules.gaussian.scene.customCameras import CustomCamera
+from gaussian_splatting.scene.customCameras import CustomCamera
 
 import numpy as np
 

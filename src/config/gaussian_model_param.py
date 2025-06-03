@@ -1,5 +1,5 @@
 from pathlib import Path
-from submodules.gaussian.arguments import ModelParams
+from gaussian_splatting.arguments import ModelParams
 import torch
 
 class GaussianModelParam(ModelParams):

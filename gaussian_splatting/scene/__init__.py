@@ -12,10 +12,10 @@
 import os
 import random
 import json
-from submodules.gaussian.utils.system_utils import searchForMaxIteration
-from submodules.gaussian.scene.dataset_readers import sceneLoadTypeCallbacks
-from submodules.gaussian.scene.gaussian_model import GaussianModel
-from submodules.gaussian.arguments import ModelParams
+from gaussian_splatting.utils.system_utils import searchForMaxIteration
+from gaussian_splatting.scene.dataset_readers import sceneLoadTypeCallbacks
+from gaussian_splatting.scene.gaussian_model import GaussianModel
+from gaussian_splatting.arguments import ModelParams
 
 class Scene:
 

@@ -67,8 +67,9 @@ class NavisimEnv(gym.Env):
         raise NotImplementedError("Reward and done logic should be implemented in the subclass")
 
     def render(self):
-        if self.render_mode == "human":
-            img = self.scene.render_from_camera_pose(self.agent_pose)
+        raise NotImplementedError("Rendering is not implemented yet")
+        # if self.render_mode == "human":
+        #     img = self.scene.render_from_camera_pose(self.agent_pose)
             # display img with OpenCV or matplotlib
 
     def close(self):

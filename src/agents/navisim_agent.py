@@ -11,7 +11,7 @@ class NavisimAgent:
     - GREEDY: Moves directly toward the goal position using normalized direction vector.
     """
     
-    def __init__(self, action_space, policy:RlPolicy):
+    def __init__(self, policy:RlPolicy):
         """
         Initialize the NavisimAgent.
 

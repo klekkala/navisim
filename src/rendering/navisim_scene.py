@@ -1,10 +1,12 @@
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
+
 from config.gaussian_model_param import GaussianModelParam
 from rendering.navisim_camera import NavisimCamera
 from world.sector import Sector
-from submodules.gaussian.scene import Scene
-from submodules.gaussian.gaussian_renderer import render
-from submodules.gaussian.gaussian_renderer import GaussianModel
-
+from gaussian_splatting.scene import Scene
+from gaussian_splatting.gaussian_renderer import render
+from gaussian_splatting.gaussian_renderer import GaussianModel
 
 import numpy as np
 import torch
