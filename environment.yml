@@ -1,0 +1,32 @@
+name: navisim
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - cudatoolkit=11.6
+  - pip
+  - numpy
+  - scipy
+  - matplotlib
+  - networkx
+  - tqdm
+  - pillow
+  - setuptools
+  - plyfile
+  - pygame
+  - shapely
+  - pytorch=2.0
+  - torchvision
+  - torchaudio
+  - pip:
+      - gymnasium==1.1.1
+      - gaussian_splatting/submodules/diff-gaussian-rasterization
+      - gaussian_splatting/submodules/simple-knn
+      - opencv-python
+      - joblib
+      - open3d==0.19.0
+      - opencv_python==4.11.0.86
+      - rocksdict==0.3.25
+      - scripts==3.0
