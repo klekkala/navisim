@@ -3,10 +3,10 @@ import torchvision
 import os
 from os import makedirs
 import numpy as np
-from submodules.gaussian.scene import Scene
-from submodules.gaussian.gaussian_renderer import render
-from submodules.gaussian.gaussian_renderer import GaussianModel
-from submodules.gaussian.scene.customCameras import CustomCamera
+from gaussian_splatting.scene import Scene
+from gaussian_splatting.gaussian_renderer import render
+from gaussian_splatting.gaussian_renderer import GaussianModel
+from gaussian_splatting.scene.customCameras import CustomCamera
 from src.paths import *
 
 class Agent:
