@@ -14,10 +14,10 @@ import json
 class BoundaryPolygon:
     def __init__(self, seq_id, sector_id):
         self.db = RocksDB()
-        self.boundary_polygon = self._get_polygon(seq_id, sector_id)
+        self.polygon = self._get_polygon(seq_id, sector_id)
     
     def __getattr__(self, name):
-        return getattr(self.boundary_polygon, name)
+        return getattr(self.polygon, name)
 
     def contains(self, x: float, y: float) -> bool:
         return self.polygon.covers(Point(x, y))
@@ -58,13 +58,17 @@ class BoundaryPolygon:
         return polygon
 
     def sample_point_within(self) -> Tuple[float, float]:
+        
+        center_point = self.polygon.centroid
+        return center_point.x, center_point.y
+
+        #TODO change sampling method later
         """Uniformly sample a point within the polygon (using rejection sampling)."""
         from shapely.geometry import Polygon, Point
         import random
+        # minx, miny, maxx, maxy = self.polygon.bounds
 
-        minx, miny, maxx, maxy = self.polygon.bounds
-
-        while True:
-            x, y = random.uniform(minx, maxx), random.uniform(miny, maxy)
-            if self.polygon.contains(Point(x, y)):
-                return x, y
+        # while True:
+        #     x, y = random.uniform(minx, maxx), random.uniform(miny, maxy)
+        #     if self.polygon.contains(Point(x, y)):
+        #         return x, y
