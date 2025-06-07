@@ -1,11 +1,13 @@
+from argparse import ArgumentParser
 from pathlib import Path
 from gaussian_splatting.arguments import ModelParams
 import torch
 
+
 class GaussianModelParam(ModelParams):
     def __init__(self, parser):
         # Initialize default parameters
-        self.gaussian_model_path: Path = Path()
+        self.model_path: str
         self.sh_degree: int = 3
         self.bg_color: list[float] = [0.0, 0.0, 0.0]
         self.dtype = torch.float32
@@ -15,8 +17,8 @@ class GaussianModelParam(ModelParams):
     @classmethod
     def create(
         cls,
-        parser,
-        gaussian_model_path: str,
+        model_path: str,
+        parser = None,
         sh_degree: int = 3,
         bg_color: list[float] = [0.0, 0.0, 0.0],
         dtype=torch.float32,
@@ -27,7 +29,7 @@ class GaussianModelParam(ModelParams):
 
         Args:
             parser: Argument parser or placeholder used by ModelParams.
-            gaussian_model_path (str): Path to the saved Gaussian model.
+            model_path (str): Path to the saved Gaussian model.
             sh_degree (int): Spherical harmonics degree.
             bg_color (list[float]): Background color.
             dtype: Torch dtype (default float32).
@@ -36,8 +38,11 @@ class GaussianModelParam(ModelParams):
         Returns:
             GaussianModelParam: Configured parameter object.
         """
+        if parser is None:
+           parser = ArgumentParser()
+
         instance = cls(parser)
-        instance.gaussian_model_path = Path(gaussian_model_path).resolve()
+        instance.model_path = Path(model_path).resolve().as_posix()
         instance.sh_degree = sh_degree
         instance.bg_color = bg_color
         instance.dtype = dtype

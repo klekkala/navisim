@@ -1,87 +1,85 @@
+import os
 import pygame
 import numpy as np
-from torchvision.transforms import ToPILImage
+import torch
 
 class GameWindow:
     def __init__(self):
         # Initialize Pygame
         pygame.init()
-  
-        # Set up window dimensions (width, height)
-        self.image1_width = (1959 / 2)
-        self.image1_height = (1090 / 2)
+
+        # Set up image dimensions
+        self.image1_width = 1280
+        self.image1_height = 720
         self.image2_width = 600
         self.image2_height = 600
 
         self.image_scale()
 
-        # Set up the window
-        self.window_width = self.image1_width + self.image2_width
-        self.window_height = self.image1_height
+        # Calculate window size
+        self.window_width = self.image1_width #int(self.image1_width + self.image2_width)
+        self.window_height = self.image1_height #int(self.image1_height)
 
-        self.window = pygame.display.set_mode((self.window_width, self.window_height))
-        
-        # Fill the window with a color (black here)
+        # Determine if headless mode (i.e., Jupyter with dummy video driver)
+        self.headless = os.environ.get("SDL_VIDEODRIVER") == "dummy"
+
+        # Use an off-screen surface in headless mode
+        if self.headless:
+            self.window = pygame.Surface((self.window_width, self.window_height))
+        else:
+            self.window = pygame.display.set_mode((self.window_width, self.window_height))
+            pygame.display.set_caption('Gaussian Splatting with Elevation Map')
+
         self.window.fill((0, 0, 0))
-        pygame.display.set_caption('Gaussian Splatting with Elevation Map')
-        
-        # To track if the window is running
         self.running = True
 
-    # priorizing image1's sizes
     def image_scale(self):
         def helper(width, max_width, height, max_height):
             width_ratio = max_width / width
             height_ratio = max_height / height
             scale_factor = min(width_ratio, height_ratio)
-
-            new_width = int(width * scale_factor)
-            new_height = int(height * scale_factor)
-            return new_width, new_height
+            return int(width * scale_factor), int(height * scale_factor)
 
         self.image1_width, self.image1_height = helper(
-            self.image1_width, self.image1_width, 
+            self.image1_width, self.image1_width,
             self.image1_height, self.image1_height
         )
-
         self.image2_width, self.image2_height = helper(
-            self.image2_width, self.image2_width, 
+            self.image2_width, self.image2_width,
             self.image2_height, self.image1_height
         )
 
     def quit(self):
         pygame.quit()
 
-    def tensor_to_surface(self, tensor):
-        # Reshape and prepare tensor for Pygame
+    def tensor_to_surface(self, tensor: torch.Tensor) -> pygame.Surface:
         h, w = tensor.shape[0], tensor.shape[1]
         return pygame.image.fromstring(tensor.numpy().tobytes(), (w, h), 'RGB')
 
-    # Function to display images on demand
-    def display_images(self, image1, image2):
-        image1 = self.tensor_to_surface(image1)
-        image1 = pygame.transform.scale(image1, (self.image1_width, self.window_height))
 
-        if isinstance(image2, np.ndarray):
-            image2 = self.numpy_to_surface(image2)
-        else:
-            image2 = pygame.image.load(image2)
-
-        image2 = pygame.transform.scale(image2, (self.image2_width, self.window_height))
-
-        self.window.blit(image1, (0, 0))
-        self.window.blit(image2, (self.image1_width, 0))
-        pygame.display.flip()
-    
     def numpy_to_surface(self, elevation_map: np.ndarray) -> pygame.Surface:
-        # Normalize
-        normalized = (elevation_map - np.nanmin(elevation_map)) / (np.nanmax(elevation_map) - np.nanmin(elevation_map))
+        normalized = (elevation_map - np.nanmin(elevation_map)) / (np.nanmax(elevation_map) - np.nanmin(elevation_map) + 1e-8)
         normalized = np.nan_to_num(normalized)
         grayscale = (normalized * 255).astype(np.uint8)
-
-        # Stack to RGB
         rgb = np.stack((grayscale,) * 3, axis=-1)
-
-        # Convert to Surface (transpose to (W, H, 3))
         surface = pygame.surfarray.make_surface(np.transpose(rgb, (1, 0, 2)))
         return surface
+
+    def display_images(self, image1_tensor: torch.Tensor, image2_array: np.ndarray):
+        image1_surface = self.tensor_to_surface(image1_tensor)
+        # image2_surface = self.numpy_to_surface(image2_array)
+
+        image1_surface = pygame.transform.scale(image1_surface, (self.window_width, self.window_height))
+        # image2_surface = pygame.transform.scale(image2_surface, (self.image2_width, self.window_height))
+
+        self.window.blit(image1_surface, (0, 0))
+        # self.window.blit(image2_surface, (self.image1_width, 0))
+
+        # Only flip if there's a display (not headless mode)
+        if not self.headless:
+            pygame.display.flip()
+
+    def get_window_pixels(self):
+        """Returns the current window surface as a numpy array (HWC RGB)."""
+        pixels = pygame.surfarray.array3d(self.window)  # (W, H, 3)
+        return np.transpose(pixels, (1, 0, 2))          # ➝ (H, W, 3)
