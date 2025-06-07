@@ -9,7 +9,6 @@ class RelativeDir(Enum):
 
 class RlPolicy(Enum):
     RANDOM = auto()
-    GREEDY = auto()
 
 class RenderMode(Enum):
     NONE = auto()
