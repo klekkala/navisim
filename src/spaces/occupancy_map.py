@@ -21,6 +21,13 @@ class OccupancyMap:
     def is_occupied(self):
         return False
 
+    def get_occupied_coordinates(self, threshold = 0):
+        if self.map is None:
+            return []
+
+        occupied_indices = np.argwhere(self.map > threshold)
+        return [tuple(idx) for idx in occupied_indices]
+
     def _get_occupancy_map(self, seq_id, sector_id):
         try:
             date, session = seq_id.split('/')
