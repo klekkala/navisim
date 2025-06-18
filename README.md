@@ -96,19 +96,19 @@ Navisim (Beogym) achieves competitive rendering performance when compared to pop
 ```
 navisim/
 ├── gaussian_splatting/     # Integration layer to run Gaussian Splatting rendering components
-├── scripts/                # Standalone scripts for data preprocessing and evaluation
-├── src/                    # Core simulation modules
-│   ├── config/             # YAML config files and config parser for environment settings
-│   ├── data/               # Module for loading and querying the simulation database
-│   ├── env/                # Navisim environment setup and Gym-compatible interface
-│   ├── motion/             # Motion model and trajectory simulator
-│   ├── rendering/          # Camera projection and Gaussian renderer wrapper
-│   ├── space/              # Spatial data structures (poses, transforms, coordinates)
-│   ├── utils/              # Helper functions and utilities used across modules
-│   └── enums/              # Enum class definitions for standardizing constant values
-├── configs/                # Experiment and environment configuration files
-├── results/                # Output logs, CSVs, and visual artifacts
-└── README.md               # Project documentation
+├── scripts/                        # Standalone scripts for data preprocessing and evaluation
+├── src/                              # Core simulation modules
+│   ├── config/                 # YAML config files and config parser for environment settings
+│   ├── data/                    # Module for loading and querying the simulation database
+│   ├── env/                     # Navisim environment setup and Gym-compatible interface
+│   ├── motion/               # Motion model and trajectory simulator
+│   ├── rendering/           # Camera projection and Gaussian renderer wrapper
+│   ├── space/                 # Spatial data structures (poses, transforms, coordinates)
+│   ├── utils/                    # Helper functions and utilities used across modules
+│   └── enums/                # Enum class definitions for standardizing constant values
+├── configs/                       # Experiment and environment configuration files
+├── results/                        # Output logs, CSVs, and visual artifacts
+└── README.md             # Project documentation
 ```
 
 ---
