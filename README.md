@@ -77,18 +77,17 @@ This creates a Gym-compatible environment with access to map data, rendering, an
 
 ## 📊 Results
 
-Navisim enables side-by-side visualization of the agent’s trajectory over real terrain data:
+Navisim (Beogym) achieves competitive rendering performance when compared to popular simulation platforms. Below is the Frames Per Second (FPS) recorded for each simulator using a single-threaded process at `1280×720` resolution across ~200 timesteps:
 
-| Example Output | Description                                   |
-| -------------- | --------------------------------------------- |
-|                | Elevation map of test terrain                 |
-|                | Agent trajectory plotted against ground truth |
+| Simulator         | FPS    |
+|-------------------|--------|
+| Carla             | ~25    |
+| Streetlearn       | ~100   |
+| Isaac Gym         | ~30    |
+| Habitat           | ~370   |
+| **Beogym (Ours)** | **~110** |
 
-Sample use cases:
-
-- Evaluating LLM-guided navigation
-- Testing reinforcement learning agents in structured environments
-- Visualizing terrain-aware movement dynamics
+> **Note**: These results were recorded on a single thread at fixed resolution (1280×720). While Beogym trades off a small amount of performance compared to Habitat, it provides high-quality rendering via Gaussian Splatting and modular real-world integration.
 
 ---
 
