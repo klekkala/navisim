@@ -37,8 +37,6 @@ conda activate navisim_env
 pip install -r requirements.txt
 ```
 
-> ROS is not required to use Navisim — we rely on the standalone `rosbags` Python parser.
-
 ---
 
 ## ⚙️ How to Use
