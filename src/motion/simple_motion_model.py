@@ -1,22 +1,39 @@
 import numpy as np
 
-from typing import Tuple
+from enum import Enum
+from scipy.spatial.transform import Rotation as R
 from motion.base_motion_model import MotionModel
 
+class Actions(Enum):
+    FORWARD = 0
+    LEFT = 1
+    RIGHT = 2
+    
 class SimpleMotionModel(MotionModel):
-    def move(self, current_pose, action):
-        x, y = current_pose[0], current_pose[1]
-        dx, dy = action
+    def __init__(self):
+        self._action_to_direction = {
+            Actions.FORWARD.value: np.array([1.0, 0.0, 0.0]),     # move forward, no rotation
+            Actions.LEFT.value:    np.array([0.0, 0.0, np.pi/12]), # rotate left (CCW)
+            Actions.RIGHT.value:   np.array([0.0, 0.0, -np.pi/12]) # rotate right (CW)
+        }
 
-        new_x = x + dx
-        new_y = y + dy
+    def move(self, agent_pose, action):
+        x, y, z, yaw, pitch, roll = agent_pose
 
-        # Check boundaries
-        if not self.sector.boundary.contains(new_x, new_y):
-            return current_pose  # Invalid move
+        # Get intended movement (e.g., [forward, lateral, delta_yaw])
+        direction = self._action_to_direction[action]
+        dx_local, dy_local, dyaw = direction
 
-        # Update elevation from the elevation map
-        z = self.sector.elevation_map.get_height_at(new_x, new_y)
+        # Update yaw (rotation around Z axis)
+        yaw = (yaw + dyaw) % (2 * np.pi)
 
-        # Preserve orientation for now
-        return (new_x, new_y, z, *current_pose[3:])
+        # Transform local direction to global coordinates
+        r = R.from_euler('z', yaw)
+        delta_global = r.apply([dx_local, dy_local, 0.0])  # No change in z
+
+        # Update position (clip to boundary)
+        new_position = np.array([x, y, z]) + delta_global
+        new_position = np.clip(new_position, [0, 0, z], [1000, 1000, z])  # clamp x and y only
+
+        # Update pose
+        return [*new_position, yaw, pitch, roll]

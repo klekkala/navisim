@@ -4,30 +4,30 @@ import numpy as np
 import torch
 
 class GameWindow:
-    def __init__(self):
+    def __init__(self, width=1280, height=720):
         # Initialize Pygame
         pygame.init()
 
+
+        # Calculate window size
+        self.width = width #int(self.image1_width + self.image2_width)
+        self.height = height #int(self.image1_height)
+        
         # Set up image dimensions
-        self.image1_width = 1280
-        self.image1_height = 720
         self.image2_width = 600
         self.image2_height = 600
 
         self.image_scale()
 
-        # Calculate window size
-        self.window_width = self.image1_width #int(self.image1_width + self.image2_width)
-        self.window_height = self.image1_height #int(self.image1_height)
 
         # Determine if headless mode (i.e., Jupyter with dummy video driver)
         self.headless = os.environ.get("SDL_VIDEODRIVER") == "dummy"
 
         # Use an off-screen surface in headless mode
         if self.headless:
-            self.window = pygame.Surface((self.window_width, self.window_height))
+            self.window = pygame.Surface((self.width, self.height))
         else:
-            self.window = pygame.display.set_mode((self.window_width, self.window_height))
+            self.window = pygame.display.set_mode((self.width, self.height))
             pygame.display.set_caption('Gaussian Splatting with Elevation Map')
 
         self.window.fill((0, 0, 0))
@@ -40,13 +40,13 @@ class GameWindow:
             scale_factor = min(width_ratio, height_ratio)
             return int(width * scale_factor), int(height * scale_factor)
 
-        self.image1_width, self.image1_height = helper(
-            self.image1_width, self.image1_width,
-            self.image1_height, self.image1_height
+        self.width, self.height = helper(
+            self.width, self.width,
+            self.height, self.height
         )
         self.image2_width, self.image2_height = helper(
             self.image2_width, self.image2_width,
-            self.image2_height, self.image1_height
+            self.image2_height, self.height
         )
 
     def quit(self):
@@ -69,7 +69,7 @@ class GameWindow:
         image1_surface = self.tensor_to_surface(image1_tensor)
         # image2_surface = self.numpy_to_surface(image2_array)
 
-        image1_surface = pygame.transform.scale(image1_surface, (self.window_width, self.window_height))
+        image1_surface = pygame.transform.scale(image1_surface, (self.width, self.height))
         # image2_surface = pygame.transform.scale(image2_surface, (self.image2_width, self.window_height))
 
         self.window.blit(image1_surface, (0, 0))

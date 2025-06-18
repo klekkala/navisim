@@ -2,6 +2,7 @@ from pygame import Surface
 from agents.navisim_agent import NavisimAgent
 from envs.navisim_env import NavisimEnv
 from typing import Callable, Optional, Any
+from utils.resource_logger import ResourceLogger
 
 import time
 
@@ -25,6 +26,7 @@ class NavisimArena:
             agent: A decision-making agent with an `act(observation)` method.
         """
         self.env = env
+        self.resource_logger = ResourceLogger(log_file='resource_log.csv')
 
     def run_episode(self, max_steps: int = 100, render: bool = True, on_render: Optional[Callable[[Any], None]] = None) -> float:
         """
@@ -38,21 +40,18 @@ class NavisimArena:
             float: Total accumulated reward for the episode.
         """
         observation, info = self.env.reset()
+
         total_reward = 0
 
         for step in range(max_steps):
             action = self.env.action_space.sample()
             observation, reward, done, truncated, info = self.env.step(action)
-            print(info)
-            
             total_reward += reward
 
             if render:
-                start_time = time.time()
-
-                rendering = self.env.render()
-                elapsed = time.time() - start_time
-                fps = 1.0 / elapsed if elapsed > 0 else float('inf')
+                rendering, elapsed = self.env.render()
+                fps = 1 / elapsed
+                self.resource_logger.log(step=step, fps=fps, render_time=elapsed)
                 on_render(rendering, step, fps)
 
         return total_reward

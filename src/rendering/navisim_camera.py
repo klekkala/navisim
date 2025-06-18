@@ -1,23 +1,27 @@
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
+
 from gaussian_splatting.scene.customCameras import CustomCamera
 
 import numpy as np
 
 class NavisimCamera(CustomCamera):
-    def __init__(self, camera_id: str, position: list[float], rotation: list[float], fov: float = 60.0):
+    def __init__(self, camera_id: str, position: list[float], rotation: list[float], W=1959, H=1090, FoVx = 1.4, FoVy = 0.87):
         """
         Initialize a NavisimCamera instance.
 
         Args:
-            camera_id (str): Unique identifier for the camera.
             position (list[float]): Camera position in 3D space.
             rotation (list[float]): Camera rotation as Euler angles (pitch, yaw, roll).
             fov (float): Field of view in degrees.
         """
-        super().__init__(camera_id, position, rotation, fov)
+        self.camera_id = camera_id
+        super().__init__(R = rotation, T=position, FoVx=FoVx, FoVy=FoVy, W=W, H=H)
     
     @classmethod
     def create(
-        camera_id: str = "navisim_cam",
+        cls, 
+        camera_id: str,
         yaw = 0, 
         pitch = 0, 
         roll = 0, 
@@ -26,8 +30,8 @@ class NavisimCamera(CustomCamera):
         z = 0, 
         FoVx: float = 1.4,
         FoVy: float = 0.87,
-        W: int = 1959,
-        H: int = 1090,
+        W: int = 1280,
+        H: int = 720,
     ):
         yaw = np.radians(yaw)
         pitch = np.radians(pitch)
@@ -52,7 +56,7 @@ class NavisimCamera(CustomCamera):
         rotation = R_z @ R_y @ R_x
 
         position = np.array([x, y, z])
-        viewpoint_camera = CustomCamera(R=rotation, T=position, FoVx=FoVx, FoVy=FoVy, W=W, H=H)
+        viewpoint_camera = NavisimCamera(camera_id=camera_id, rotation=rotation, position=position, FoVx=FoVx, FoVy=FoVy, W=W, H=H)
         return viewpoint_camera
 
 
@@ -62,7 +66,7 @@ class NavisimCamera(CustomCamera):
         self.trans[2] += z  # moving z-axis front and back
         self.update_transforms()
     
-    def rotate(self, view, roll, pitch, yaw):
+    def rotate(self, roll, pitch, yaw):
         R_x = self.rotation_matrix_x(pitch)
         R_y = self.rotation_matrix_y(yaw)
         R_z = self.rotation_matrix_z(roll)

@@ -1,4 +1,5 @@
 from enums.enums import RlPolicy
+from enum import Enum
 
 import numpy as np
 
@@ -8,10 +9,9 @@ class NavisimAgent:
 
     Supported policies:
     - RANDOM: Selects actions randomly from the action space.
-    - GREEDY: Moves directly toward the goal position using normalized direction vector.
     """
     
-    def __init__(self, action_space):
+    def __init__(self, action_space, policy:RlPolicy = RlPolicy.RANDOM):
         """
         Initialize the NavisimAgent.
 
@@ -20,12 +20,9 @@ class NavisimAgent:
             policy (RlPolicy): Behavior policy used for action selection.
         """
         self.action_space = action_space
+        self.policy = policy
     
-    def sample_action(self):
-        return self.action_space.sample()
-
-
-    def act(self, policy, observation):
+    def act(self, observation):
         """
         Select an action based on the current observation and agent policy.
 
@@ -35,15 +32,9 @@ class NavisimAgent:
         Returns:
             np.ndarray: Action to apply in the environment.
         """
-        if policy == RlPolicy.RANDOM:
+        if self.policy == RlPolicy.RANDOM:
             return self.action_space.sample()
-        elif policy == RlPolicy.GREEDY:
-            return self._greedy_toward_goal(observation)
         else:
             raise NotImplementedError(f"Unsupported policy: {self.policy}")
-
-    #TODO : Implement action based on greedy policy
-    def _greedy_toward_goal(self, observation):
-        raise NotImplementedError("Greedy policy is not implemented yet.")
     
     

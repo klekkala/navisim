@@ -31,6 +31,9 @@ def visualize_occupancy_map(map, save_path=None, boundary = None, title = "Occup
     
     if save_path:
         plt.savefig(save_path, bbox_inches='tight')
+    
+    plt.tight_layout()
+    plt.show()
     plt.close()
 
 def visualize_elevation_map(map, boundary = None, save_path=None, title = "Elevation Map"):
@@ -56,6 +59,9 @@ def visualize_elevation_map(map, boundary = None, save_path=None, title = "Eleva
 
     if save_path:
         plt.savefig(save_path, bbox_inches='tight')
+    
+    plt.tight_layout()
+    plt.show()
     plt.close()
 
 def visualize_seq_graph(graph, out_path, title = 'sequence_graph'):
