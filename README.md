@@ -1,35 +1,120 @@
-### Project Setup
-#### Installation
-1. Clone the repository
-   ```bash
-   git clone https://github.com/klekkala/navisim.git
-   cd navisim
-   ```
+# Navisim
 
-2. **(Optional) Create and activate a virtual environment**
+Navisim is a high-fidelity simulation toolkit designed for evaluating autonomous navigation agents in realistic outdoor environments. It leverages real-world data collected via mobile robots and incorporates key features such as elevation map generation, motion data extraction, and environment-aware visual rendering.
 
-   **Using venv (Python built-in):**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate    # On macOS/Linux
-   venv\Scripts\activate       # On Windows
-   ```
-   Using conda(if preferred):
-   ```bash
-   conda create --name your-env-name python=3.x
-   conda activate your-env-name
-   ```
-   
-3. Install required packages
-   ```
-   pip install -r requirements.txt
-   ```
+> **Note**: The project introduction is subject to change as the final design and scope are still being discussed.
+
 ---
 
-### How to Use
-1. Download `sequence_graph.gpickle` and `database.tar` from [this link](https://drive.google.com/drive/folders/1mGaTTTblhbVnN_i5AivSQU1ZWyZJIY87?usp=drive_link) into the `assets/` folder.
+## 🚀 Project Introduction
 
-2. Extract the contents of `database.tar` using the command below:
+Autonomous agents need to be tested in realistic environments before deployment. **Navisim** addresses this by combining:
 
-   ```bash
-   tar -xvf database.tar -C assets/
+- **ROS bag processing** to extract ground-truth control and odometry signals
+- **Elevation mapping** from surface point clouds
+- **Motion model construction** for trajectory simulation
+- Seamless integration with Gymnasium environments to support reinforcement learning workflows
+
+This project enables reproducible experiments and provides a modular backend for developing and benchmarking navigation strategies in complex terrains.
+> **Note**: The project introduction is subject to change as the final design and scope are still being discussed.
+
+---
+
+## 🛠 Project Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/your-org/navisim.git
+cd navisim
+```
+
+### 2. Create the Conda environment
+
+```bash
+conda create -n navisim_env python=3.10
+conda activate navisim_env
+pip install -r requirements.txt
+```
+
+> ROS is not required to use Navisim — we rely on the standalone `rosbags` Python parser.
+
+---
+
+## ⚙️ How to Use
+
+### 1. Prepare Required Assets
+
+Download the following files from [this Google Drive link](https://drive.google.com/drive/folders/1mGaTTTblhbVnN_i5AivSQU1ZWyZJIY87?usp=drive_link) and place them inside the `assets/` directory of the project:
+
+- `sequence_graph.gpickle`
+- `database.tar`
+
+Then extract the contents of `database.tar`:
+
+```bash
+tar -xvf assets/database.tar -C assets/
+```
+
+This step sets up the simulation environment with preprocessed point cloud data and graph structures for navigation.
+
+---
+
+### 3. Launch the Navisim Environment
+
+You can now initialize and step through the environment in Python:
+
+```python
+from navisim.env import NavisimEnv
+
+env = NavisimEnv(config_path="configs/env_config.yaml")
+obs = env.reset()
+```
+
+This creates a Gym-compatible environment with access to map data, rendering, and motion simulation.
+
+---
+
+## 📊 Results
+
+Navisim enables side-by-side visualization of the agent’s trajectory over real terrain data:
+
+| Example Output | Description                                   |
+| -------------- | --------------------------------------------- |
+|                | Elevation map of test terrain                 |
+|                | Agent trajectory plotted against ground truth |
+
+Sample use cases:
+
+- Evaluating LLM-guided navigation
+- Testing reinforcement learning agents in structured environments
+- Visualizing terrain-aware movement dynamics
+
+---
+
+## 📁 Folder Structure
+
+```
+navisim/
+├── gaussian_splatting/     # Integration layer to run Gaussian Splatting rendering components
+├── scripts/                # Standalone scripts for data preprocessing and evaluation
+├── src/                    # Core simulation modules
+│   ├── config/             # YAML config files and config parser for environment settings
+│   ├── data/               # Module for loading and querying the simulation database
+│   ├── env/                # Navisim environment setup and Gym-compatible interface
+│   ├── motion/             # Motion model and trajectory simulator
+│   ├── rendering/          # Camera projection and Gaussian renderer wrapper
+│   ├── space/              # Spatial data structures (poses, transforms, coordinates)
+│   ├── utils/              # Helper functions and utilities used across modules
+│   └── enums/              # Enum class definitions for standardizing constant values
+├── configs/                # Experiment and environment configuration files
+├── results/                # Output logs, CSVs, and visual artifacts
+└── README.md               # Project documentation
+```
+
+---
+
+## 📬 Contact
+
+For questions or contributions, please open an issue or contact [email@example.com](mailto\:emaill@example.com)].
+
