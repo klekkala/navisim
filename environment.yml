@@ -3,13 +3,15 @@ channels:
   - pytorch
   - conda-forge
   - defaults
+  - nvidia
 dependencies:
   - python=3.10
-  - cudatoolkit=11.6
+  - nvidia::cudatoolkit=11.6
   - pip
   - numpy
   - scipy
   - matplotlib
+  - ninja
   - networkx
   - tqdm
   - pillow
@@ -17,7 +19,7 @@ dependencies:
   - plyfile
   - pygame
   - shapely
-  - pytorch=2.0
+  - pytorch::pytorch=2.0
   - torchvision
   - torchaudio
   - pip:
