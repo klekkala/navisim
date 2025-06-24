@@ -111,7 +111,21 @@ navisim/
 
 ---
 
+
+## ⚡️ Branching Strategy
+
+We follow a structured Git workflow to ensure clarity and maintainability:
+- `feat/*` — new feature development
+- `fix/*` — bug fixes
+- `chore/*` — code cleanup, refactoring, or configuration updates
+- `hotfix/*` — urgent patches to production
+
+For more details, refer to [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+
+---
+
 ## 📬 Contact
 
 For questions or contributions, please open an issue or contact [email@example.com](mailto\:emaill@example.com)].
+
 
