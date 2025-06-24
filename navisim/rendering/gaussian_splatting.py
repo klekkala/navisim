@@ -1,4 +1,4 @@
-from data.rocksdb import RocksDB
+from navisim.data.rocksdb import RocksDB
 from plyfile import PlyData
 
 from io import BytesIO

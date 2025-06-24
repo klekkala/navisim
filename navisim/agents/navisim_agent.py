@@ -1,7 +1,4 @@
-from enums.enums import RlPolicy
-from enum import Enum
-
-import numpy as np
+from navisim.enums.enums import RlPolicy
 
 class NavisimAgent:
     """

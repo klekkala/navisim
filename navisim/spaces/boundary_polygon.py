@@ -3,10 +3,10 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..')))
 
 from typing import Tuple
-from data.rocksdb import RocksDB
 from shapely import wkb
 from shapely.geometry import Point
-from enums.enums import RelativeDir
+from navisim.enums.enums import RelativeDir
+from navisim.data.rocksdb import RocksDB
 
 import math
 import json

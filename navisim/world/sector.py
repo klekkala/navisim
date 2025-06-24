@@ -1,8 +1,8 @@
 from collections import defaultdict
-from rendering.gaussian_splatting import GaussianSplatting
-from spaces.elevation_map import ElevationMap
-from spaces.occupancy_map import OccupancyMap
-from spaces.boundary_polygon import BoundaryPolygon
+from navisim.rendering.gaussian_splatting import GaussianSplatting
+from navisim.spaces.elevation_map import ElevationMap
+from navisim.spaces.occupancy_map import OccupancyMap
+from navisim.spaces.boundary_polygon import BoundaryPolygon
 
 class Sector:
     def __init__(self, seq_id, sector_id):

@@ -3,16 +3,14 @@ import gymnasium as gym
 import numpy as np
 import random
 
-from agents.navisim_agent import NavisimAgent
-from config.gaussian_model_param import GaussianModelParam
-from enums.enums import RenderMode
-from enum import Enum
-from envs.game_window import GameWindow
-from gymnasium import spaces
-from motion.simple_motion_model import SimpleMotionModel
-from rendering.navisim_camera import NavisimCamera
-from rendering.navisim_scene import NavisimScene
-from world.sequence_graph import SequenceGraph
+from navisim.config.gaussian_model_param import GaussianModelParam
+
+from navisim.enums.enums import RenderMode
+from navisim.envs.game_window import GameWindow
+from navisim.motion.simple_motion_model import SimpleMotionModel
+from navisim.rendering.navisim_camera import NavisimCamera
+from navisim.rendering.navisim_scene import NavisimScene
+from navisim.world.sequence_graph import SequenceGraph
 
 import time
 

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Tuple
-from world.sector import Sector
+from navisim.world.sector import Sector
 
 class MotionModel(ABC):
     """

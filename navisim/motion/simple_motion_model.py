@@ -2,7 +2,7 @@ import numpy as np
 
 from enum import Enum
 from scipy.spatial.transform import Rotation as R
-from motion.base_motion_model import MotionModel
+from navisim.motion.base_motion_model import MotionModel
 
 class Actions(Enum):
     FORWARD = 0

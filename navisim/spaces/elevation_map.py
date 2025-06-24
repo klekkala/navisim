@@ -1,5 +1,5 @@
-from data.rocksdb import RocksDB
-from spaces.boundary_polygon import BoundaryPolygon
+from navisim.data.rocksdb import RocksDB
+from navisim.spaces.boundary_polygon import BoundaryPolygon
 from scipy.ndimage import map_coordinates
 
 import json

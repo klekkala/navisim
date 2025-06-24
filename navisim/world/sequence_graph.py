@@ -1,5 +1,5 @@
 from collections import defaultdict
-from world.sector import Sector
+from navisim.world.sector import Sector
 
 import pickle
 

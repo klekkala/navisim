@@ -2,8 +2,8 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data.rocksdb import RocksDB
-from spaces.boundary_polygon import BoundaryPolygon
+from navisim.data.rocksdb import RocksDB
+from navisim.spaces.boundary_polygon import BoundaryPolygon
 
 import json
 import numpy as np

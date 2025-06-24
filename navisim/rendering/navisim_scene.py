@@ -1,10 +1,12 @@
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
 
-from agents.agent import CustomPipeline
+
 from config.gaussian_model_param import GaussianModelParam
 from rendering.navisim_camera import NavisimCamera
-from world.sector import Sector
+from navisim.world.sector import Sector
+from navisim.agents.pipeline import CustomPipeline
+
 from gaussian_splatting.scene import Scene
 from gaussian_splatting.gaussian_renderer import render
 from gaussian_splatting.gaussian_renderer import GaussianModel
