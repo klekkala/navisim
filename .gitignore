@@ -28,3 +28,6 @@ hd5_files/
 *.pkl
 
 assets/
+
+# any other data files
+*.csv
