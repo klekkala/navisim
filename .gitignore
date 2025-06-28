@@ -31,3 +31,16 @@ assets/
 
 # any other data files
 *.csv
+
+
+# Build directories
+build/
+cmake-build-*/
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
