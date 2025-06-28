@@ -1,7 +1,14 @@
-import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
+import os, sys
 
-from third_party.scene.customCameras import CustomCamera
+# Get the absolute path to your project root
+# Assuming your structure is: project_root/experimental/test.ipynb
+project_root = os.path.abspath(os.path.join(os.getcwd(), '..', '..'))
+
+# Add the third_party/gs directory to Python path
+third_party_path = os.path.join(project_root, 'third_party', 'gaussian-splatting')
+if third_party_path not in sys.path:
+    sys.path.insert(0, third_party_path)
+from scene.customCameras import CustomCamera
 
 import numpy as np
 
