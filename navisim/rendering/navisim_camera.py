@@ -1,18 +1,6 @@
-import os, sys
-
-# Get the absolute path to your project root
-# Assuming your structure is: project_root/experimental/test.ipynb
-project_root = os.path.abspath(os.path.join(os.getcwd(), '..', '..'))
-
-# Add the third_party/gs directory to Python path
-third_party_path = os.path.join(project_root, 'third_party', 'gaussian-splatting')
-if third_party_path not in sys.path:
-    sys.path.insert(0, third_party_path)
-from scene.customCameras import CustomCamera
-
 import numpy as np
 
-class NavisimCamera(CustomCamera):
+class NavisimCamera:
     def __init__(self, camera_id: str, position: list[float], rotation: list[float], W=1959, H=1090, FoVx = 1.4, FoVy = 0.87):
         """
         Initialize a NavisimCamera instance.
@@ -23,7 +11,12 @@ class NavisimCamera(CustomCamera):
             fov (float): Field of view in degrees.
         """
         self.camera_id = camera_id
-        super().__init__(R = rotation, T=position, FoVx=FoVx, FoVy=FoVy, W=W, H=H)
+        self.R = rotation  # Rotation matrix
+        self.T = position
+        self.FoVx = FoVx
+        self.FoVy = FoVy
+        self.W = W
+        self.H = H
     
     @classmethod
     def create(
