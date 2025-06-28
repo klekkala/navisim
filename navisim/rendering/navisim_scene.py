@@ -7,9 +7,9 @@ from rendering.navisim_camera import NavisimCamera
 from navisim.world.sector import Sector
 from navisim.agents.pipeline import CustomPipeline
 
-from gaussian_splatting.scene import Scene
-from gaussian_splatting.gaussian_renderer import render
-from gaussian_splatting.gaussian_renderer import GaussianModel
+from third_party.scene import Scene
+from third_party.gaussian_renderer import render
+from third_party.gaussian_renderer import GaussianModel
 
 import numpy as np
 import torch

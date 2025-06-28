@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
 
 from argparse import ArgumentParser
 from pathlib import Path
-from gaussian_splatting.arguments import ModelParams
+from third_party.arguments import ModelParams
 import torch
 
 

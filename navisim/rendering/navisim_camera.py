@@ -1,7 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
 
-from gaussian_splatting.scene.customCameras import CustomCamera
+from third_party.scene.customCameras import CustomCamera
 
 import numpy as np
 
