@@ -1,4 +1,4 @@
-from navisim.data.rocksdb import RocksDB
+from navisim.data.rocksdb import get_db
 from navisim.spaces.boundary_polygon import BoundaryPolygon
 from scipy.ndimage import map_coordinates
 
@@ -9,7 +9,7 @@ import io
 
 class ElevationMap: 
     def __init__(self, seq_id, sector_id):
-        self.db = RocksDB()
+        self.db = get_db()
         self.map = self._get_elevation_map(seq_id, sector_id)
 
     def get_height_at(self, x: float, y: float) -> float:

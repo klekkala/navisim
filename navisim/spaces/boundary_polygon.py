@@ -6,14 +6,14 @@ from typing import Tuple
 from shapely import wkb
 from shapely.geometry import Point
 from navisim.enums.enums import RelativeDir
-from navisim.data.rocksdb import RocksDB
+from navisim.data.rocksdb import get_db
 
 import math
 import json
 
 class BoundaryPolygon:
     def __init__(self, seq_id, sector_id):
-        self.db = RocksDB()
+        self.db = get_db()
         self.polygon = self._get_polygon(seq_id, sector_id)
     
     def __getattr__(self, name):
