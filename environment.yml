@@ -19,10 +19,11 @@ dependencies:
   - plyfile
   - pygame
   - shapely
-  - pytorch::pytorch=2.0
+  - pytorch-gpu=2.0
   - torchvision
   - torchaudio
   - pip:
+      - GPUtil
       - gymnasium==1.1.1
       - gaussian_splatting/submodules/diff-gaussian-rasterization
       - gaussian_splatting/submodules/simple-knn

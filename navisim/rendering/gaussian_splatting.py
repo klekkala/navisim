@@ -12,8 +12,11 @@ class GaussianSplatting:
     
     def get_gaussian_splatting(self, seq_id, sector_id) -> str: 
         date, session = seq_id.split('/')
-        base_path = Path("gs", date, session, str(sector_id))
-        ply_path = base_path / "point_cloud" / "iteration_0" / "point_cloud.ply"
+        # base_path = Path("gs", date, session, str(sector_id))
+        # ply_path = base_path / "point_cloud" / "iteration_0" / "point_cloud.ply"
+
+        base_path = Path("../../../Data/12a18dcf-1/")
+        ply_path = base_path / "point_cloud" / "iteration_30000" / "point_cloud.ply"
 
         # Skip if file already exists
         if ply_path.exists():
