@@ -1,3 +1,6 @@
 [submodule "third_party/gaussian_splatting"]
 	path = third_party/gaussian_splatting
 	url = https://github.com/graphdeco-inria/gaussian-splatting.git
+[submodule "third_party/sapien"]
+	path = third_party/sapien
+	url = https://github.com/haosulab/SAPIEN.git
