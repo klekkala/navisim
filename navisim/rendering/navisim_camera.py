@@ -1,11 +1,6 @@
-import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
-
-from gaussian_splatting.scene.customCameras import CustomCamera
-
 import numpy as np
 
-class NavisimCamera(CustomCamera):
+class NavisimCamera:
     def __init__(self, camera_id: str, position: list[float], rotation: list[float], W=1959, H=1090, FoVx = 1.4, FoVy = 0.87):
         """
         Initialize a NavisimCamera instance.
@@ -16,7 +11,12 @@ class NavisimCamera(CustomCamera):
             fov (float): Field of view in degrees.
         """
         self.camera_id = camera_id
-        super().__init__(R = rotation, T=position, FoVx=FoVx, FoVy=FoVy, W=W, H=H)
+        self.R = rotation  # Rotation matrix
+        self.T = position
+        self.FoVx = FoVx
+        self.FoVy = FoVy
+        self.W = W
+        self.H = H
     
     @classmethod
     def create(

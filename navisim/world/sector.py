@@ -7,7 +7,7 @@ from navisim.spaces.boundary_polygon import BoundaryPolygon
 class Sector:
     def __init__(self, seq_id, sector_id):
         self.seq_id = seq_id
-        self.sector_id = f'sector{sector_id}'
+        self.sector_id = sector_id
 
         self._elevation_map = None
         self._occupancy_map = None

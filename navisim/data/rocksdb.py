@@ -1,77 +1,111 @@
+
 from rocksdict import Rdict, Options
 import threading
 import atexit
-import numpy as np
+import os
 
-class RocksDB:
-    _instance = None
-    _lock = threading.Lock()
+from pathlib import Path
+from rocksdict import Rdict, Options
+import threading
+import atexit
+import os
 
-    def __new__(cls, db_path="/lab/kiran/navisim-1/assets/rocksdb", options=None):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super(RocksDB, cls).__new__(cls)
-                    cls._instance._initialize(db_path, options)
-                    atexit.register(cls._instance.close)  # ✅ Ensure close on exit
-        return cls._instance
+class RocksDBManager:
+    def __init__(self, db_path: Path = None, options=None):
+        # Default to project_root/assets/rocksdb
+        if db_path is None:
+            db_path = self.get_default_db_path()
+        
+        self.db_path = Path(db_path)
+        self.options = options or Options()
+        self._db = None
+        self._lock = threading.Lock()
+        self._initialize()
+        atexit.register(self.close)
     
-    def __getattr__(self, name):
-        # Avoid recursion if 'db' isn't initialized yet
-        if name == "db" or not hasattr(self, "db"):
-            raise AttributeError(f"'RocksDB' object has no attribute '{name}'")
-        return getattr(self.db, name)
-
-    def _initialize(self, db_path, options):
-        options = options if options else self._get_options()
-        self.db_path = db_path
+    @staticmethod
+    def get_default_db_path() -> Path:
+        """Get the default database path relative to project root"""
+        # Find project root by looking for setup.py or pyproject.toml
+        current = Path(__file__).resolve()
+        
+        # Walk up the directory tree to find project root
+        for parent in current.parents:
+            if (parent / "setup.py").exists() or (parent / "pyproject.toml").exists():
+                return parent / "assets" / "rocksdb"
+        
+        # Fallback: assume we're in navisim package, go up two levels
+        project_root = current.parents[2]  # navisim/database.py -> navisim-1/
+        return project_root / "assets" / "rocksdb"
+    
+    @staticmethod
+    def get_project_root() -> Path:
+        """Get the project root directory"""
+        current = Path(__file__).resolve()
+        
+        # Look for project markers
+        for parent in current.parents:
+            if (parent / "setup.py").exists() or (parent / "pyproject.toml").exists():
+                return parent
+                
+        # Fallback
+        return current.parents[2]
+    
+    def _initialize(self):
+        # Create directory if it doesn't exist
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        
         try:
-            self.db = Rdict(db_path, options)
+            self._db = Rdict(str(self.db_path), self.options)
+            print(f"[INFO] RocksDB initialized at: {self.db_path}")
         except OSError as e:
             if "LOCK" in str(e):
-                print("[WARN] Detected lock file. Attempting to clean up...")
-                import os
-                lock_file = os.path.join(db_path, "LOCK")
-                if os.path.exists(lock_file):
-                    os.remove(lock_file)
-                # Retry once after removal
-                self.db = Rdict(db_path, options)
+                self._handle_lock_file()
+                self._db = Rdict(str(self.db_path), self.options)
             else:
                 raise
     
-    def _get_options(self):
-        return Options()
-
-    def save(self, key, value):
-        self.db[key] = value
-
-    def get(self, key):
-        if key not in self.db:
-            raise KeyError(f"Key not found in RocksDB: {key}")
-        return self.db.get(key)
-
-    def close(self):
-        if hasattr(self, "db"):
-            self.db.close()
-            del self.db
-        RocksDB._instance = None  
+    def _handle_lock_file(self):
+        lock_file = self.db_path / "LOCK"
+        if lock_file.exists():
+            lock_file.unlink()
+            print(f"[INFO] Removed lock file: {lock_file}")
     
-    def delete(self):
-        self.db.close()
-        Rdict.destroy(self.db_path)
+    def save(self, key, value):
+        with self._lock:
+            self._db[key] = value
+    
+    def get(self, key, default=None):
+        with self._lock:
+            if default is None:
+                if key not in self._db:
+                    raise KeyError(f"Key not found: {key}")
+                return self._db[key]
+            return self._db.get(key, default)
+    
+    def exists(self, key):
+        with self._lock:
+            return key in self._db
+    
+    def close(self):
+        if self._db:
+            self._db.close()
+            self._db = None
+            print(f"[INFO] RocksDB closed: {self.db_path}")
 
-    def __enter__(self):
-        return self
+# Global instance
+_db_instance = None
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+def get_db(db_path:Path = None) -> RocksDBManager:
+    global _db_instance
 
-    def __del__(self):
-        self.close()
+    if _db_instance is None:
+        _db_instance = RocksDBManager(db_path)
+    return _db_instance
 
-
-    @classmethod
-    def reset_instance(cls):
-        if cls._instance:
-            cls._instance.close()
-            cls._instance = None
+def reset_db():
+    """For testing"""
+    global _db_instance
+    if _db_instance:
+        _db_instance.close()
+    _db_instance = None
