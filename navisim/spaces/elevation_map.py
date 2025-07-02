@@ -1,10 +1,16 @@
-from navisim.data.rocksdb import get_db
-from navisim.spaces.boundary_polygon import BoundaryPolygon
-from scipy.ndimage import map_coordinates
-
 import json
 import numpy as np
 import io
+
+from scipy.ndimage import map_coordinates
+
+try:
+    from ..data.rocksdb import get_db
+except ImportError: 
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from navisim.data.rocksdb import get_db
 
 
 class ElevationMap: 

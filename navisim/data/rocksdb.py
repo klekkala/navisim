@@ -1,4 +1,5 @@
 
+from typing import Optional
 from rocksdict import Rdict, Options
 import threading
 import atexit
@@ -11,11 +12,9 @@ import atexit
 import os
 
 class RocksDBManager:
-    def __init__(self, db_path: Path = None, options=None):
+    def __init__(self, db_path: Optional[Path] = None, options=None):
         # Default to project_root/assets/rocksdb
-        if db_path is None:
-            db_path = self.get_default_db_path()
-        
+        db_path = db_path or self.get_default_db_path()
         self.db_path = Path(db_path)
         self.options = options or Options()
         self._db = None
@@ -94,18 +93,12 @@ class RocksDBManager:
             print(f"[INFO] RocksDB closed: {self.db_path}")
 
 # Global instance
-_db_instance = None
+_db_instance = RocksDBManager()
 
-def get_db(db_path:Path = None) -> RocksDBManager:
-    global _db_instance
-
-    if _db_instance is None:
-        _db_instance = RocksDBManager(db_path)
+def get_db() -> RocksDBManager:
     return _db_instance
 
 def reset_db():
     """For testing"""
-    global _db_instance
-    if _db_instance:
-        _db_instance.close()
+    _db_instance.close()
     _db_instance = None

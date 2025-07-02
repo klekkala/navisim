@@ -1,16 +1,20 @@
-import os
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..')))
+import math
+import json
 
 from typing import Tuple
 from shapely import wkb
 from shapely.geometry import Point
-from navisim.enums.enums import RelativeDir
-from navisim.data.rocksdb import get_db
 
-import math
-import json
-
+try:
+    from ..enums.enums import RelativeDir
+    from ..data.rocksdb import get_db
+except ImportError: 
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from navisim.enums.enums import RelativeDir
+    from navisim.data.rocksdb import get_db
+    
 class BoundaryPolygon:
     def __init__(self, seq_id, sector_id):
         self.db = get_db()

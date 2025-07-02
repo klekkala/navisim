@@ -2,7 +2,14 @@ import numpy as np
 
 from enum import Enum
 from scipy.spatial.transform import Rotation as R
-from navisim.motion.base_motion_model import MotionModel
+
+try:
+    from .base_motion_model import MotionModel
+except ImportError:
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from navisim.motion.base_motion_model import MotionModel
 
 class Actions(Enum):
     FORWARD = 0

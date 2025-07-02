@@ -1,7 +1,13 @@
-from collections import defaultdict
-from navisim.world.sector import Sector
-
 import pickle
+from collections import defaultdict
+
+try:
+    from ..world.sector import Sector
+except ImportError: 
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from navisim.world.sector import Sector
 
 class SequenceGraph:
     def __init__(self, path):

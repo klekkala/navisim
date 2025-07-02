@@ -2,17 +2,32 @@ import uuid
 import gymnasium as gym
 import numpy as np
 import random
-
-from navisim.config.gaussian_model_param import GaussianModelParam
-
-from navisim.enums.enums import RenderMode
-from navisim.envs.game_window import GameWindow
-from navisim.motion.simple_motion_model import SimpleMotionModel
-from navisim.rendering.navisim_camera import NavisimCamera
-from navisim.rendering.navisim_scene import NavisimScene
-from navisim.world.sequence_graph import SequenceGraph
-
 import time
+
+try:
+    from ..config.gaussian_model_param import GaussianModelParam
+    from ..enums.enums import RenderMode
+    from ..envs.game_window import GameWindow
+    from ..motion.simple_motion_model import SimpleMotionModel
+    from ..rendering.navisim_camera import NavisimCamera
+    from ..rendering.navisim_scene import NavisimScene
+    from ..world.sequence_graph import SequenceGraph
+    from ..data.rocksdb import reset_db
+    
+except ImportError:
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+    from navisim.config.gaussian_model_param import GaussianModelParam
+    from navisim.enums.enums import RenderMode
+    from navisim.envs.game_window import GameWindow
+    from navisim.motion.simple_motion_model import SimpleMotionModel
+    from navisim.rendering.navisim_camera import NavisimCamera
+    from navisim.rendering.navisim_scene import NavisimScene
+    from navisim.world.sequence_graph import SequenceGraph
+    from navisim.data.rocksdb import reset_db
+
 
 class NavisimEnv(gym.Env):
     def __init__(self, sequence_graph : SequenceGraph, render_mode: RenderMode, window : GameWindow):
@@ -41,13 +56,15 @@ class NavisimEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
+        reset_db()
+
         self.current_sequence_id = random.choice(self.sequence_graph.get_sequence_ids())
         sequence = self.sequence_graph.get_sequence(self.current_sequence_id)
+        
         if self.current_sector:
             self.current_sector.unload_all()
 
         self.current_sector = sequence[self.sequence_index]
-
         self.motion_model = self._load_motion_model_for_current_sector(self.current_sector)
         self.scene = self._load_scene_for_current_sector(self.current_sector)
         

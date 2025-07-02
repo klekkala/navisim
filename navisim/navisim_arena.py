@@ -1,10 +1,21 @@
 from pygame import Surface
-from navisim.agents.navisim_agent import NavisimAgent
-from navisim.envs.navisim_env import NavisimEnv
-from typing import Callable, Optional, Any
-from utils.resource_logger import ResourceLogger
-
 import time
+
+from typing import Callable, Optional, Any
+
+
+try:
+    from agents.navisim_agent import NavisimAgent
+    from envs.navisim_env import NavisimEnv
+    from utils.resource_logger import ResourceLogger
+except ImportError: 
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from navisim.agents.navisim_agent import NavisimAgent
+    from navisim.envs.navisim_env import NavisimEnv
+    from navisim.utils.resource_logger import ResourceLogger
+
 
 class NavisimArena:
     """
