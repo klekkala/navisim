@@ -1,7 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import Any, Tuple
-from navisim.world.sector import Sector
 
+try:
+    from ..world.sector import Sector
+except ImportError:
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from navisim.world.sector import Sector
+
+    
 class MotionModel(ABC):
     """
     Abstract base class for motion models used in Navisim.

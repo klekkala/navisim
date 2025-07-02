@@ -1,13 +1,17 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from navisim.data.rocksdb import get_db
-from navisim.spaces.boundary_polygon import BoundaryPolygon
-
 import json
 import numpy as np
 import io
+
+try:
+    from ..data.rocksdb import get_db
+    from ..spaces.boundary_polygon import BoundaryPolygon
+except ImportError: 
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from navisim.data.rocksdb import get_db
+    from navisim.spaces.boundary_polygon import BoundaryPolygon
+
 
 class OccupancyMap:
     def __init__(self, seq_id, sector_id):

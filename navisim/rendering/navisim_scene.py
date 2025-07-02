@@ -1,21 +1,26 @@
 import os, sys
-
-project_root = os.path.abspath(os.path.join(os.getcwd(), '..'))
-third_party_path = os.path.join(project_root, 'third_party', 'gaussian_splatting')
-if third_party_path not in sys.path:
-    sys.path.insert(0, third_party_path)
-
-
-from config.gaussian_model_param import GaussianModelParam
-from rendering.navisim_camera import NavisimCamera
-from navisim.world.sector import Sector
-from navisim.agents.pipeline import CustomPipeline
-
-from scene import Scene
-from gaussian_renderer import render, GaussianModel
-
 import numpy as np
 import torch
+
+
+try:
+    from ...third_party.gaussian_splatting.gaussian_renderer import GaussianModel, render
+    from ...third_party.gaussian_splatting.scene import Scene
+    from ..world.sector import Sector
+    from ..agents.pipeline import CustomPipeline
+    from ..rendering.navisim_camera import NavisimCamera
+    from ..config.gaussian_model_param import GaussianModelParam
+except ImportError:
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+    from third_party.gaussian_splatting.gaussian_renderer import GaussianModel, render
+    from third_party.gaussian_splatting.scene import Scene
+    from navisim.world.sector import Sector
+    from navisim.agents.pipeline import CustomPipeline
+    from navisim.rendering.navisim_camera import NavisimCamera 
+
+    from config.gaussian_model_param import GaussianModelParam
 
 class NavisimScene(Scene):
     def __init__(self, model_params, camera : NavisimCamera, gaussian_model : GaussianModel, sector : Sector, background, device="cuda"):
