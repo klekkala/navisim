@@ -25,11 +25,10 @@ dependencies:
   - pip:
       - GPUtil
       - gymnasium==1.1.1
-      - gaussian_splatting/submodules/diff-gaussian-rasterization
-      - gaussian_splatting/submodules/simple-knn
       - opencv-python
       - joblib
       - open3d==0.19.0
       - opencv_python==4.11.0.86
       - rocksdict==0.3.25
       - scripts==3.0
+      - pybind11

@@ -1,3 +1,1 @@
-[submodule "third_party/gaussian_splatting"]
-	path = third_party/gaussian_splatting
-	url = https://github.com/graphdeco-inria/gaussian-splatting.git
+	branch = main
