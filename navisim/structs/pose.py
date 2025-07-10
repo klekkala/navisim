@@ -17,7 +17,7 @@ class Pose:
     def create(cls, pose: Union[torch.Tensor, nPose, List[nPose], "Pose"]):
         pass
         
-    def __mul__(self, arg0: Union["Pose", nPose])":
+    def __mul__(self, arg0: Union["Pose", nPose]):
         pass
     
     
