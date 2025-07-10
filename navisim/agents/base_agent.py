@@ -1,3 +1,5 @@
+from typing import Optional, Union
+
 try:
     from ..enums.enums import RlPolicy
 except ImportError:
@@ -6,13 +8,16 @@ except ImportError:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     from navisim.enums.enums import RlPolicy
 
-class NavisimAgent:
+class BaseAgent:
     """
     NavisimAgent class that selects actions based on a specified policy.
 
     Supported policies:
     - RANDOM: Selects actions randomly from the action space.
     """
+    
+    uid: str
+    
     
     def __init__(self, action_space, policy:RlPolicy = RlPolicy.RANDOM):
         """

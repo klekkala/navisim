@@ -6,11 +6,11 @@ import os
 # Define the extension module
 ext_modules = [
     Pybind11Extension(
-        "navisim.math_operations",  # Module will be navisim.math_operations
-        ["navisim/_native/math_operations.cpp"],
+        "native.pose",  # Module will be navisim.math_operations
+        ["native/binding.cpp"],
         include_dirs=[
             pybind11.get_include(),
-            os.path.join(os.path.dirname(__file__), "navisim", "_native"),
+            os.path.join(os.path.dirname(__file__), "native", "struct"),
         ],
         cxx_std=14,
     ),
