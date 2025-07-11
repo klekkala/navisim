@@ -9,7 +9,6 @@ namespace py = pybind11;
 PYBIND11_MODULE(pose, m) {
     m.doc() = "Native Pose class for navisim (pybind11)";
 
-    // Pose class
     py::class_<Pose>(m, "Pose")
         // constructor
         .def(py::init<
@@ -20,12 +19,12 @@ PYBIND11_MODULE(pose, m) {
         )
 
         // expose fields
-        .def_readwrite("x",    &Pose::x)
-        .def_readwrite("y",    &Pose::y)
-        .def_readwrite("z",    &Pose::z)
-        .def_readwrite("roll", &Pose::roll)
-        .def_readwrite("pitch",&Pose::pitch)
-        .def_readwrite("yaw",  &Pose::yaw)
+        .def_readwrite("x",     &Pose::x)
+        .def_readwrite("y",     &Pose::y)
+        .def_readwrite("z",     &Pose::z)
+        .def_readwrite("roll",  &Pose::roll)
+        .def_readwrite("pitch", &Pose::pitch)
+        .def_readwrite("yaw",   &Pose::yaw)
 
         // methods
         .def("translate", &Pose::translate,
@@ -45,13 +44,36 @@ PYBIND11_MODULE(pose, m) {
              py::arg("other"),
              "Compose two poses with the * operator")
         .def("__repr__", [](const Pose &p) {
-            return "<Pose x=" + std::to_string(p.x)
-                 + " y=" + std::to_string(p.y)
-                 + " z=" + std::to_string(p.z)
-                 + " roll=" + std::to_string(p.roll)
-                 + " pitch=" + std::to_string(p.pitch)
-                 + " yaw=" + std::to_string(p.yaw)
+            return "<Pose x="   + std::to_string(p.x)
+                 + " y="        + std::to_string(p.y)
+                 + " z="        + std::to_string(p.z)
+                 + " roll="     + std::to_string(p.roll)
+                 + " pitch="    + std::to_string(p.pitch)
+                 + " yaw="      + std::to_string(p.yaw)
                  + ">";
         })
-        ;
+
+        // pickle support
+        .def(py::pickle(
+            // __getstate__: pack the six doubles
+            [](Pose const &p) {
+                return py::make_tuple(
+                    p.x, p.y, p.z,
+                    p.roll, p.pitch, p.yaw
+                );
+            },
+            // __setstate__: unpack to recreate a Pose
+            [](py::tuple t) {
+                if (t.size() != 6)
+                    throw std::runtime_error("Invalid Pose state!");
+                return Pose(
+                    t[0].cast<double>(),
+                    t[1].cast<double>(),
+                    t[2].cast<double>(),
+                    t[3].cast<double>(),
+                    t[4].cast<double>(),
+                    t[5].cast<double>()
+                );
+            }
+        ));
 }
