@@ -16,7 +16,6 @@ except ImportError:
     
 ray.init(ignore_reinit_error=True)
 
-
 @ray.remote(num_cpus=1)
 def _translate(p: nPose, dx: float, dy: float, dz: float) -> nPose:
     p.translate(dx, dy, dz)
@@ -43,4 +42,4 @@ if __name__ == "__main__":
     print("remote:", translated)
     
     inverse = inverse(samplePose)
-    print("remote:", translated)
+    print("remote inverse:", inverse)
