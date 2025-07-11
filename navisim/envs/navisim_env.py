@@ -9,8 +9,8 @@ try:
     from ..enums.enums import RenderMode
     from ..envs.game_window import GameWindow
     from ..motion.simple_motion_model import SimpleMotionModel
-    from ..rendering.navisim_camera import NavisimCamera
-    from ..rendering.navisim_scene import NavisimScene
+    from ..render.navisim_camera import NavisimCamera
+    from ..render.navisim_scene import NavisimScene
     from ..world.sequence_graph import SequenceGraph
     from ..data.rocksdb import reset_db
     
@@ -23,8 +23,8 @@ except ImportError:
     from navisim.enums.enums import RenderMode
     from navisim.envs.game_window import GameWindow
     from navisim.motion.simple_motion_model import SimpleMotionModel
-    from navisim.rendering.navisim_camera import NavisimCamera
-    from navisim.rendering.navisim_scene import NavisimScene
+    from navisim.render.navisim_camera import NavisimCamera
+    from navisim.render.navisim_scene import NavisimScene
     from navisim.world.sequence_graph import SequenceGraph
     from navisim.data.rocksdb import reset_db
 
