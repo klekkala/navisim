@@ -15,7 +15,7 @@ class GaussianSplatting:
         # base_path = Path("gs", date, session, str(sector_id))
         # ply_path = base_path / "point_cloud" / "iteration_0" / "point_cloud.ply"
 
-        base_path = Path("../../../Data/12a18dcf-1/")
+        base_path = Path("../../Data/12a18dcf-1/")
         ply_path = base_path / "point_cloud" / "iteration_30000" / "point_cloud.ply"
 
         # Skip if file already exists

@@ -1,9 +1,9 @@
 import os, sys
 
 project_root = os.path.abspath(os.path.join(os.getcwd(), '..'))
-third_party_path = os.path.join(project_root, 'third_party', 'gaussian_splatting')
-if third_party_path not in sys.path:
-    sys.path.insert(0, third_party_path)
+# third_party_path = os.path.join(project_root, 'third_party', 'gaussian_splatting')
+# if third_party_path not in sys.path:
+#     sys.path.insert(0, third_party_path)
 
 
 from config.gaussian_model_param import GaussianModelParam
@@ -11,8 +11,8 @@ from rendering.navisim_camera import NavisimCamera
 from navisim.world.sector import Sector
 from navisim.agents.pipeline import CustomPipeline
 
-from scene import Scene
-from gaussian_renderer import render, GaussianModel
+from gaussian_splatting.scene import Scene
+from gaussian_splatting.gaussian_renderer import render, GaussianModel
 
 import numpy as np
 import torch

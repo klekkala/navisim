@@ -28,10 +28,12 @@ hd5_files/
 *.pkl
 
 assets/
+gaussian_splatting/
+glm/
 
 # any other data files
 *.csv
-
+.nfs*
 
 # Build directories
 build/

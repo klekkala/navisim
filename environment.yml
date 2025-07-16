@@ -1,4 +1,4 @@
-name: navisim
+name: navisim_test
 channels:
   - pytorch
   - conda-forge
@@ -24,6 +24,7 @@ dependencies:
   - torchaudio
   - pip:
       - GPUtil
+      - pybind11
       - gymnasium==1.1.1
       - gaussian_splatting/submodules/diff-gaussian-rasterization
       - gaussian_splatting/submodules/simple-knn

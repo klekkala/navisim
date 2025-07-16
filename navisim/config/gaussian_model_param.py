@@ -2,11 +2,11 @@ import os
 import sys
 
 project_root = os.path.abspath(os.path.join(os.getcwd(), '..'))
-third_party_path = os.path.join(project_root, 'third_party', 'gaussian_splatting')
-if third_party_path not in sys.path:
-    sys.path.insert(0, third_party_path)
+# third_party_path = os.path.join(project_root, 'third_party', 'gaussian_splatting')
+# if third_party_path not in sys.path:
+#     sys.path.insert(0, third_party_path)
 
-from arguments import ModelParams
+from gaussian_splatting.arguments import ModelParams
 from argparse import ArgumentParser
 from pathlib import Path
 import torch
