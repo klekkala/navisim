@@ -37,6 +37,7 @@ assets/
 build/
 cmake-build-*/
 
+glm/
 __pycache__/
 *.py[cod]
 *$py.class

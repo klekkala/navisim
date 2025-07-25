@@ -61,10 +61,9 @@ class NavisimCamera:
 
 
     def translate(self, x, y, z):
-        self.trans[0] += x  # moving x-axis left and right
-        self.trans[1] += y  # moving y-axis up or down
-        self.trans[2] += z  # moving z-axis front and back
-        self.update_transforms()
+        self.T[0] += x  # moving x-axis left and right
+        self.T[1] += y  # moving y-axis up or down
+        self.T[2] += z  # moving z-axis front and back
     
     def rotate(self, roll, pitch, yaw):
         R_x = self.rotation_matrix_x(pitch)
@@ -74,8 +73,6 @@ class NavisimCamera:
         self.R = np.dot(self.R, R_x)
         self.R = np.dot(self.R, R_y)
         self.R = np.dot(self.R, R_z)
-
-        self.update_transforms()
     
     def rotation_matrix_x(self, angle_radians):
         R_new = np.array([[1, 0, 0],

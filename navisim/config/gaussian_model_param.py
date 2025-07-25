@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 try:
-    from ...third_party.gaussian_splatting.arguments import ModelParams
+    from third_party.gaussian_splatting.arguments import ModelParams
 except ImportError:
     import os
     import sys
