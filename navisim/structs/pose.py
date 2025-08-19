@@ -29,7 +29,6 @@ def _inverse(p: nPose) -> nPose:
 translate = sync_remote(_translate)
 inverse = sync_remote(_inverse)
 
-
 if __name__ == "__main__":
     # 4) Create a sample and call remote
     samplePose = nPose(0, 0, 0, 0, 0, 0)

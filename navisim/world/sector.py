@@ -48,6 +48,11 @@ class Sector:
             self._gaussian_model = GaussianSplatting(self.seq_id, self.sector_id)
         return self._gaussian_model
     
+    @property
+    def gs_key(self) -> str:
+        """Stable key for caching/preloading on the renderer side."""
+        return f"{self.seq_id}/{self.sector_id}:{self.version}"
+    
     def __repr__(self):
         return f"Sector {self.sector_id}"
         

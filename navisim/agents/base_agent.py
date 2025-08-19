@@ -1,15 +1,16 @@
 from typing import Optional, Union
 
 try:
-    from ..enums.enums import RlPolicy
+    from ..structs.enums.enums import RlPolicy
 except ImportError:
     import os
     import sys
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    from navisim.enums.enums import RlPolicy
+    from navisim.structs.enums.enums import RlPolicy
 
 class BaseAgent:
     """
+    Base class for agents 
     NavisimAgent class that selects actions based on a specified policy.
 
     Supported policies:
@@ -44,5 +45,4 @@ class BaseAgent:
             return self.action_space.sample()
         else:
             raise NotImplementedError(f"Unsupported policy: {self.policy}")
-    
     
