@@ -43,7 +43,8 @@ class PhysicsComponent(Component):
         """Update physics state."""
         # Apply forces to transform component if available
         if self.entity:
-            transform = self.entity.get_component("TransformComponent")
+            from .transform import TransformComponent
+            transform = self.entity.get_component(TransformComponent)
             if transform:
                 # Simple force integration (F = ma)
                 acceleration = self.applied_force / self.mass
