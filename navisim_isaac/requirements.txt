@@ -1,0 +1,15 @@
+# Core dependencies
+numpy>=1.20.0
+pyyaml>=5.4.0
+gymnasium>=0.28.0
+
+# Development dependencies (optional)
+pytest>=7.0.0
+pytest-cov>=3.0.0
+black>=22.0.0
+flake8>=4.0.0
+mypy>=0.950
+
+# Note: IsaacSim dependencies need to be installed separately
+# Follow Isaac Sim installation guide at:
+# https://docs.omniverse.nvidia.com/isaacsim/latest/
