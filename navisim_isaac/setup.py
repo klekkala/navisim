@@ -33,6 +33,7 @@ setup(
         "numpy>=1.20.0",
         "pyyaml>=5.4.0",
         "gymnasium>=0.28.0",
+        "networkx>=2.6.0",
     ],
     extras_require={
         "dev": [
