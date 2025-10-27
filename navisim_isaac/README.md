@@ -13,8 +13,18 @@ NaviSim (SequenceGraph) <-> IsaacSim (Simulation + PhysX) <-> Gymnasium (RL Envi
 ### Components
 
 #### NaviSim Module (`navisim/`)
-- **SequenceGraph**: Manages navigation graph with USDZ and height field data
+
+**World Components** (`navisim/world/`):
+- **SequenceGraph**: NetworkX-based navigation graph loaded from pickle, manages sequences and sectors
+- **Sector**: Represents a sector with lazy-loaded height field, USDZ, and boundary polygon data
+
+**Spatial Data Components** (`navisim/spaces/`):
+- **HeightField**: Height field data for terrain generation
+- **USDZLoader**: USDZ scene file loader for IsaacSim
+- **BoundaryPolygon**: Spatial boundary constraints for navigation
 - **ElevationMapGenerator**: Generates aligned elevation maps for IsaacSim
+
+**Utilities**:
 - **DataConverter**: Converts data between NaviSim and IsaacSim formats
 
 #### IsaacSim Module (`isaac/`)
@@ -70,9 +80,18 @@ Configuration is managed through YAML files. See `config/default_config.yaml` fo
 navisim_isaac/
 ├── __init__.py
 ├── navisim/              # NaviSim integration
-│   ├── sequence_graph.py
-│   ├── elevation_map.py
-│   └── converters.py
+│   ├── __init__.py
+│   ├── converters.py          # Data format converters
+│   ├── world/                 # Navigation graph structure
+│   │   ├── __init__.py
+│   │   ├── sequence_graph.py  # NetworkX-based sequence graph
+│   │   └── sector.py          # Sector with lazy-loaded data
+│   └── spaces/                # Spatial data components
+│       ├── __init__.py
+│       ├── height_field.py    # Height field data
+│       ├── usdz_loader.py     # USDZ scene loader
+│       ├── boundary_polygon.py # Boundary polygon data
+│       └── elevation_map.py   # Elevation map generation
 ├── isaac/                # IsaacSim integration
 │   ├── simulator.py
 │   ├── physx.py
@@ -86,7 +105,8 @@ navisim_isaac/
 ├── utils/                # Utilities
 │   └── common.py
 ├── examples/             # Example scripts
-│   └── basic_example.py
+│   ├── basic_example.py
+│   └── sequence_graph_example.py
 └── tests/                # Unit tests
 ```
 

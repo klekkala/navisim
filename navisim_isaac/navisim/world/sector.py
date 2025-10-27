@@ -51,7 +51,7 @@ class Sector:
         """
         if self._height_field is None:
             print(f"Loading HeightField for {self.seq_id}/{self.sector_id}")
-            from .height_field import HeightField
+            from ..spaces.height_field import HeightField
             self._height_field = HeightField(self.seq_id, self.sector_id)
         return self._height_field
 
@@ -67,7 +67,7 @@ class Sector:
         """
         if self._usdz is None:
             print(f"Loading USDZ for {self.seq_id}/{self.sector_id}")
-            from .usdz_loader import USDZLoader
+            from ..spaces.usdz_loader import USDZLoader
             self._usdz = USDZLoader(self.seq_id, self.sector_id)
         return self._usdz
 
@@ -83,7 +83,7 @@ class Sector:
         """
         if self._boundary is None:
             print(f"Loading BoundaryPolygon for {self.seq_id}/{self.sector_id}")
-            from .boundary_polygon import BoundaryPolygon
+            from ..spaces.boundary_polygon import BoundaryPolygon
             self._boundary = BoundaryPolygon(self.seq_id, self.sector_id)
         return self._boundary
 

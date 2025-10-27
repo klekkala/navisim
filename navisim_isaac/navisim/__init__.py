@@ -4,16 +4,24 @@ NaviSim Integration Module
 Handles SequenceGraph, elevation map generation, and data conversion.
 """
 
-from .sequence_graph import SequenceGraph
-from .sector import Sector
-from .height_field import HeightField
-from .usdz_loader import USDZLoader
-from .boundary_polygon import BoundaryPolygon
+# World components
+from .world import SequenceGraph, Sector
+
+# Spatial data components
+from .spaces import HeightField, USDZLoader, BoundaryPolygon, ElevationMapGenerator
+
+# Converters
+from .converters import DataConverter
 
 __all__ = [
+    # World
     "SequenceGraph",
     "Sector",
+    # Spaces
     "HeightField",
     "USDZLoader",
-    "BoundaryPolygon"
+    "BoundaryPolygon",
+    "ElevationMapGenerator",
+    # Converters
+    "DataConverter",
 ]
