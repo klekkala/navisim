@@ -1,0 +1,216 @@
+"""
+Navigation Example with IsaacSim 5.0
+
+Demonstrates how to:
+1. Initialize IsaacSim world
+2. Load a sector USD scene
+3. Spawn a navigation robot
+4. Control the robot to navigate waypoints
+"""
+
+import numpy as np
+from pathlib import Path
+
+# NaviSim-Isaac imports
+from navisim_isaac.isaac.simulator import IsaacSimulator
+from navisim_isaac.isaac.navigation_robot import NavigationRobot
+from navisim_isaac.isaac.navigation_controller import NavigationController
+from navisim_isaac.isaac.terrain import TerrainManager
+
+
+def main():
+    """
+    Main navigation example demonstrating robot placement and navigation.
+    """
+    print("=" * 60)
+    print("NaviSim-Isaac Navigation Example")
+    print("=" * 60)
+
+    # Configuration
+    config = {
+        'physics_dt': 1.0 / 60.0,  # 60 Hz physics
+        'rendering_dt': 1.0 / 30.0  # 30 Hz rendering
+    }
+
+    # Step 1: Initialize IsaacSim
+    print("\n[Step 1] Initializing IsaacSim...")
+    simulator = IsaacSimulator(config=config)
+    simulator.initialize(headless=False)
+
+    # Get world and stage
+    world = simulator.get_world()
+    stage = simulator.get_stage()
+
+    # Step 2: Load sector USD scene (if available)
+    print("\n[Step 2] Loading sector scene...")
+    sector_usd_path = "/Users/jiwon_hae/python_proj/navisim/navisim_isaac/sector_usd.usd"
+
+    if Path(sector_usd_path).exists():
+        try:
+            scene_prim_path = simulator.load_sector_usd(
+                usd_path=sector_usd_path,
+                position=(0.0, 0.0, 0.0)
+            )
+            print(f"✓ Loaded sector USD at: {scene_prim_path}")
+
+            # Load terrain from USD
+            terrain_manager = TerrainManager(stage=stage)
+            terrain_prim = terrain_manager.load_terrain_from_usd(
+                usd_scene_path=scene_prim_path,
+                heightmap_prim_name="Heightmap",
+                enable_physics=True
+            )
+            terrain_manager.set_terrain_properties(
+                friction=0.8,
+                restitution=0.1
+            )
+            print(f"✓ Loaded terrain with physics: {terrain_prim}")
+
+        except Exception as e:
+            print(f"! Could not load sector USD: {e}")
+            print("  Continuing with default ground plane...")
+    else:
+        print(f"! Sector USD not found: {sector_usd_path}")
+        print("  Continuing with default ground plane...")
+
+    # Step 3: Spawn navigation robot
+    print("\n[Step 3] Spawning navigation robot...")
+    robot = NavigationRobot(
+        robot_type="differential_drive",
+        name="nav_robot",
+        world=world
+    )
+
+    # Spawn robot at initial position
+    initial_position = (0.0, 0.0, 0.5)  # Start 0.5m above ground
+    robot_prim = robot.spawn(
+        position=initial_position,
+        orientation=(0.0, 0.0, 0.0, 1.0)  # No rotation
+    )
+    print(f"✓ Spawned robot at: {initial_position}")
+    print(f"  Prim path: {robot_prim}")
+
+    # Step 4: Initialize navigation controller
+    print("\n[Step 4] Initializing navigation controller...")
+    controller = NavigationController(
+        max_linear_speed=1.0,  # 1 m/s
+        max_angular_speed=1.0,  # 1 rad/s
+        position_tolerance=0.2,  # 20cm tolerance
+        orientation_tolerance=0.1  # ~6 degrees
+    )
+
+    # Define waypoint path
+    waypoints = [
+        (2.0, 0.0, 0.5),   # Move forward 2m
+        (2.0, 2.0, 0.5),   # Turn and move right 2m
+        (0.0, 2.0, 0.5),   # Move back left 2m
+        (0.0, 0.0, 0.5),   # Return to start
+    ]
+    controller.set_waypoint_path(waypoints)
+    print(f"✓ Set navigation path with {len(waypoints)} waypoints")
+
+    # Step 5: Reset world to initialize physics
+    print("\n[Step 5] Initializing physics simulation...")
+    world.reset()
+    print("✓ World reset complete")
+
+    # Step 6: Start simulation
+    print("\n[Step 6] Starting navigation simulation...")
+    print("Press Ctrl+C to stop\n")
+
+    simulator.play()
+
+    try:
+        step_count = 0
+        max_steps = 3000  # ~50 seconds at 60Hz
+
+        while step_count < max_steps:
+            # Get current robot state
+            position, orientation = robot.get_pose()
+
+            # Compute velocity commands
+            linear_vel, angular_vel = controller.compute_path_following_velocity(
+                current_position=position,
+                current_orientation=orientation
+            )
+
+            # Apply velocity to robot
+            robot.set_velocity(linear_vel, angular_vel)
+
+            # Step simulation
+            simulator.step(num_steps=1)
+            step_count += 1
+
+            # Print progress every 60 steps (~1 second)
+            if step_count % 60 == 0:
+                waypoint_idx = controller.waypoint_index
+                total_waypoints = len(waypoints)
+                print(f"Step {step_count}: Position {position[:2]}, "
+                      f"Waypoint {waypoint_idx}/{total_waypoints}, "
+                      f"Vel: ({linear_vel:.2f}, {angular_vel:.2f})")
+
+            # Check if path complete
+            if controller.current_waypoint is None:
+                print("\n✓ Navigation complete! Path finished.")
+                break
+
+    except KeyboardInterrupt:
+        print("\n\nNavigation interrupted by user")
+
+    # Step 7: Cleanup
+    print("\n[Step 7] Cleaning up...")
+    robot.stop()
+    simulator.pause()
+    print("✓ Simulation paused")
+
+    print("\n" + "=" * 60)
+    print("Navigation Example Complete!")
+    print("=" * 60)
+    print("\nTo close: Stop the simulation and close IsaacSim")
+
+
+def test_simple_navigation():
+    """
+    Simplified test for quick validation (without USD scene).
+    """
+    print("Running Simple Navigation Test...\n")
+
+    # Initialize
+    simulator = IsaacSimulator()
+    simulator.initialize()
+    world = simulator.get_world()
+
+    # Spawn simple robot
+    robot = NavigationRobot(name="test_robot", world=world)
+    robot.spawn_simple_robot(position=(0.0, 0.0, 0.5), size=(0.5, 0.5, 0.3))
+
+    # Initialize controller
+    controller = NavigationController()
+    controller.set_waypoint((2.0, 2.0, 0.5))
+
+    # Reset and play
+    world.reset()
+    simulator.play()
+
+    # Run for 300 steps
+    for i in range(300):
+        pos, orn = robot.get_pose()
+        lin_vel, ang_vel = controller.compute_velocity_to_point(pos, orn, (2.0, 2.0, 0.5))
+        robot.set_velocity(lin_vel, ang_vel)
+        simulator.step()
+
+        if i % 60 == 0:
+            print(f"Step {i}: Position {pos}, Velocity ({lin_vel:.2f}, {ang_vel:.2f})")
+
+    robot.stop()
+    simulator.pause()
+    print("\nSimple test complete!")
+
+
+if __name__ == "__main__":
+    import sys
+
+    if "--simple" in sys.argv:
+        test_simple_navigation()
+    else:
+        main()
