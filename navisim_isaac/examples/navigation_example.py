@@ -352,7 +352,7 @@ def main():
 
         # Try to get position to verify physics is working
         try:
-            pos, orn = robot.get_pose()
+            pos, _ = robot.get_pose()
             print(f"  robot.get_pose() works: position={pos}")
             robot_in_world = True
         except Exception as e:

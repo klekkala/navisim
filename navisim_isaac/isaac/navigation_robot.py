@@ -8,10 +8,9 @@ from typing import Tuple, Optional, Dict, Any
 import numpy as np
 
 # IsaacSim 5.0 imports
-# Note: Camera is imported later in _initialize_camera() after SimulationApp is ready
+# Note: Some modules imported later after SimulationApp is ready (Camera, DynamicCuboid)
 try:
     from omni.isaac.core.robots import Robot
-    from omni.isaac.core.objects import DynamicCuboid
     from omni.isaac.wheeled_robots.controllers.differential_controller import DifferentialController
     ISAAC_SIM_AVAILABLE = True
 except ImportError:
@@ -173,6 +172,9 @@ class NavigationRobot:
 
         # Real IsaacSim implementation
         try:
+            # Import DynamicCuboid AFTER SimulationApp is ready (not at top level)
+            from omni.isaac.core.objects import DynamicCuboid
+
             print(f"Creating DynamicCuboid at {position}...")
 
             self.robot_instance = DynamicCuboid(
