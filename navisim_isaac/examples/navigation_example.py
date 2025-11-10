@@ -70,10 +70,24 @@ def main():
 
     # Step 2: Load sector USD scene (if available)
     print("\n[Step 2] Loading sector scene...")
-    sector_usd_path = "/Users/jiwon_hae/python_proj/navisim/navisim_isaac/sector_usd.usd"
 
-    if Path(sector_usd_path).exists():
+    # Try to find a USD file
+    sector_usd_path = None
+    possible_paths = [
+        "/Users/jiwon_hae/python_proj/navisim/navisim_isaac/sector_usd.usd",
+        "/lab/student/jiwon/navisim/navisim_isaac/sector_usd.usd",
+        Path(__file__).parent.parent / "sector_usd.usd",
+    ]
+
+    for path in possible_paths:
+        if Path(path).exists():
+            sector_usd_path = str(path)
+            break
+
+    scene_loaded = False
+    if sector_usd_path:
         try:
+            print(f"  Loading USD from: {sector_usd_path}")
             scene_prim_path = simulator.load_sector_usd(
                 usd_path=sector_usd_path,
                 position=(0.0, 0.0, 0.0)
@@ -92,13 +106,14 @@ def main():
                 restitution=0.1
             )
             print(f"✓ Loaded terrain with physics: {terrain_prim}")
+            scene_loaded = True
 
         except Exception as e:
             print(f"! Could not load sector USD: {e}")
             print("  Continuing with default ground plane...")
     else:
-        print(f"! Sector USD not found: {sector_usd_path}")
-        print("  Continuing with default ground plane...")
+        print("! No USD file found - using default ground plane")
+        print("  The scene will be simple but robot should still move")
 
     # Step 3: Spawn navigation robot with camera
     print("\n[Step 3] Spawning navigation robot with camera...")
@@ -120,14 +135,25 @@ def main():
         camera_config=camera_config
     )
 
-    # Spawn robot at initial position
-    initial_position = (0.0, 0.0, 0.5)  # Start 0.5m above ground
-    robot_prim = robot.spawn(
+    # Determine initial position based on scene
+    if scene_loaded:
+        # Place robot in center of USD scene (adjust based on your scene)
+        initial_position = (0.0, 0.0, 1.0)  # 1m above ground for safety
+        print("  Positioning robot in center of USD scene")
+    else:
+        # Default ground plane
+        initial_position = (0.0, 0.0, 0.5)  # 0.5m above ground
+        print("  Positioning robot on default ground plane")
+
+    # Use spawn_simple_robot for better physics (box-shaped robot)
+    robot_prim = robot.spawn_simple_robot(
         position=initial_position,
-        orientation=(0.0, 0.0, 0.0, 1.0)  # No rotation
+        size=(0.5, 0.5, 0.3)  # 50cm x 50cm x 30cm box
     )
+
     print(f"✓ Spawned robot at: {initial_position}")
     print(f"  Prim path: {robot_prim}")
+    print(f"  Robot type: Simple box with physics")
     print(f"  Camera enabled: {robot.has_camera()}")
 
     # Step 4: Initialize navigation controller
@@ -152,7 +178,33 @@ def main():
     # Step 5: Reset world to initialize physics
     print("\n[Step 5] Initializing physics simulation...")
     world.reset()
+    simulator.play()
     print("✓ World reset complete")
+
+    # Let physics settle for a moment
+    print("  Letting physics settle...")
+    for _ in range(60):  # ~1 second at 60Hz
+        simulator.step(num_steps=1)
+
+    # Check robot position after settling
+    pos_after_settle, _ = robot.get_pose()
+    print(f"  Robot position after physics settle: [{pos_after_settle[0]:.3f}, {pos_after_settle[1]:.3f}, {pos_after_settle[2]:.3f}]")
+
+    # Take initial snapshot
+    print("\n  Taking initial snapshot...")
+    output_dir = Path(__file__).parent / "navigation_output"
+    output_dir.mkdir(exist_ok=True)
+
+    initial_image = robot.get_camera_image()
+    if initial_image is not None and PIL_AVAILABLE:
+        try:
+            from PIL import Image as PILImage
+            snapshot_path = output_dir / "initial_snapshot.png"
+            PILImage.fromarray(initial_image).save(snapshot_path)
+            print(f"  ✓ Initial snapshot saved to: {snapshot_path}")
+            print(f"    This shows the robot's view at start position")
+        except Exception as e:
+            print(f"  ! Could not save snapshot: {e}")
 
     # Step 6: Start simulation with image capture
     print("\n[Step 6] Starting navigation simulation...")
@@ -171,9 +223,11 @@ def main():
     # Debug: Check camera and PIL status
     print(f"✓ Camera enabled: {robot.has_camera()}")
     print(f"✓ PIL available: {PIL_AVAILABLE}")
-    print()
 
-    simulator.play()
+    # Verify robot can move
+    print(f"✓ Robot position: {robot.get_pose()[0]}")
+    print(f"✓ Robot is in world: {robot.robot_instance is not None if hasattr(robot, 'robot_instance') else 'Unknown'}")
+    print()
 
     # Track saved image count
     images_saved = 0
@@ -199,6 +253,16 @@ def main():
             # Step simulation
             simulator.step(num_steps=1)
             step_count += 1
+
+            # Debug: Check if robot is actually moving
+            if step_count == 120:  # After 2 seconds
+                print(f"\n  DEBUG: After 2 seconds of movement:")
+                print(f"    Position: {position}")
+                print(f"    Velocity commands: linear={linear_vel:.2f}, angular={angular_vel:.2f}")
+                print(f"    Distance from origin: {(position[0]**2 + position[1]**2)**0.5:.3f}m")
+                if (position[0]**2 + position[1]**2)**0.5 < 0.1:
+                    print(f"    ⚠ WARNING: Robot not moving! Check physics/velocity application")
+                print()
 
             # Capture and save camera image periodically
             if step_count % save_interval == 0:

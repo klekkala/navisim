@@ -11,10 +11,8 @@ import numpy as np
 # Note: Camera is imported later in _initialize_camera() after SimulationApp is ready
 try:
     from omni.isaac.core.robots import Robot
-    from omni.isaac.wheeled_robots.robots import WheeledRobot
     from omni.isaac.core.objects import DynamicCuboid
     from omni.isaac.wheeled_robots.controllers.differential_controller import DifferentialController
-    from omni.isaac.core.utils.prims import create_prim
     ISAAC_SIM_AVAILABLE = True
 except ImportError:
     ISAAC_SIM_AVAILABLE = False
@@ -219,24 +217,40 @@ class NavigationRobot:
             return
 
         # Real IsaacSim implementation
-        if self.controller is not None:
-            # Use differential controller to compute wheel velocities
-            wheel_velocities = self.controller.forward(
-                command=[linear_velocity, angular_velocity]
-            )
-            # Apply wheel velocities to robot
-            if hasattr(self.robot_instance, 'apply_wheel_actions'):
-                self.robot_instance.apply_wheel_actions(wheel_velocities)
-        else:
-            # Direct velocity control for simple robots
-            if hasattr(self.robot_instance, 'set_linear_velocity'):
-                self.robot_instance.set_linear_velocity(
-                    np.array([linear_velocity, 0.0, 0.0])
+        try:
+            if self.controller is not None:
+                # Use differential controller to compute wheel velocities
+                wheel_velocities = self.controller.forward(
+                    command=[linear_velocity, angular_velocity]
                 )
-            if hasattr(self.robot_instance, 'set_angular_velocity'):
-                self.robot_instance.set_angular_velocity(
-                    np.array([0.0, 0.0, angular_velocity])
-                )
+                # Apply wheel velocities to robot
+                if hasattr(self.robot_instance, 'apply_wheel_actions'):
+                    self.robot_instance.apply_wheel_actions(wheel_velocities)
+            else:
+                # Direct velocity control for simple robots (DynamicCuboid)
+                # Get current orientation to compute forward direction
+                _, orientation = self.get_pose()
+
+                # Convert linear velocity to world space based on robot orientation
+                # Extract yaw from quaternion
+                x, y, z, w = orientation
+                yaw = np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+
+                # Compute velocity in world space
+                vel_x = linear_velocity * np.cos(yaw)
+                vel_y = linear_velocity * np.sin(yaw)
+
+                # Apply velocities
+                if hasattr(self.robot_instance, 'set_linear_velocity'):
+                    self.robot_instance.set_linear_velocity(
+                        np.array([vel_x, vel_y, 0.0])
+                    )
+                if hasattr(self.robot_instance, 'set_angular_velocity'):
+                    self.robot_instance.set_angular_velocity(
+                        np.array([0.0, 0.0, angular_velocity])
+                    )
+        except Exception as e:
+            print(f"Warning: Failed to set velocity: {e}")
 
     def set_wheel_velocities(
         self,
