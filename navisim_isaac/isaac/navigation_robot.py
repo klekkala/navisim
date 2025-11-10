@@ -172,26 +172,47 @@ class NavigationRobot:
             return self.prim_path
 
         # Real IsaacSim implementation
-        self.robot_instance = DynamicCuboid(
-            prim_path=self.prim_path,
-            name=self.name,
-            position=position,
-            size=np.array(size),
-            color=np.array([0.2, 0.6, 1.0]),
-            mass=10.0
-        )
+        try:
+            print(f"Creating DynamicCuboid at {position}...")
 
-        # Add to world scene
-        if self.world:
-            self.world.scene.add(self.robot_instance)
+            self.robot_instance = DynamicCuboid(
+                prim_path=self.prim_path,
+                name=self.name,
+                position=position,
+                size=np.array(size),
+                color=np.array([0.2, 0.6, 1.0]),
+                mass=10.0
+            )
 
-        # Mark as spawned BEFORE initializing camera
-        self.is_spawned = True
+            print(f"✓ DynamicCuboid created: {self.robot_instance}")
 
-        # Initialize camera attached to robot
-        self._initialize_camera()
+            # Add to world scene - CRITICAL for physics
+            if self.world:
+                print(f"Adding robot to world scene...")
+                self.world.scene.add(self.robot_instance)
+                print(f"✓ Robot added to world scene")
 
-        print(f"Spawned simple robot at {position} with size {size}")
+                # Verify it was added
+                if hasattr(self.world.scene, 'get_object'):
+                    obj = self.world.scene.get_object(self.name)
+                    print(f"✓ Verified in scene: {obj is not None}")
+            else:
+                print("! Warning: world is None, robot not added to scene")
+
+            # Mark as spawned BEFORE initializing camera
+            self.is_spawned = True
+
+            # Initialize camera attached to robot
+            self._initialize_camera()
+
+            print(f"✓ Spawned simple robot at {position} with size {size}")
+
+        except Exception as e:
+            print(f"! Error spawning robot: {e}")
+            import traceback
+            traceback.print_exc()
+            self.is_spawned = False
+
         return self.prim_path
 
     def set_velocity(

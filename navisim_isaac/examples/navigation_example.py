@@ -115,8 +115,8 @@ def main():
         print("! No USD file found - using default ground plane")
         print("  The scene will be simple but robot should still move")
 
-    # Step 3: Spawn navigation robot with camera
-    print("\n[Step 3] Spawning navigation robot with camera...")
+    # Step 3: Prepare robot configuration (don't spawn yet!)
+    print("\n[Step 3] Preparing navigation robot configuration...")
 
     # Camera configuration for capturing navigation images
     camera_config = {
@@ -128,22 +128,14 @@ def main():
         'focal_length': 24.0
     }
 
-    robot = NavigationRobot(
-        robot_type="differential_drive",
-        name="nav_robot",
-        world=world,
-        camera_config=camera_config
-    )
-
     # Determine initial position based on scene
     if scene_loaded:
         # For USD scenes, try to find a safe spawn position
-        # First attempt: query the USD bounds
         spawn_height = 0.5  # Start 50cm above surface
 
         try:
             # Try to get scene bounds from the stage
-            from pxr import UsdGeom, Gf
+            from pxr import UsdGeom
             scene_prim = stage.GetPrimAtPath("/World/Sector")
 
             if scene_prim.IsValid():
@@ -158,7 +150,7 @@ def main():
 
                 initial_position = (center_x, center_y, base_z + spawn_height)
                 print(f"  Scene bounds: {bounds.GetMin()} to {bounds.GetMax()}")
-                print(f"  Positioning robot at scene center: ({center_x:.2f}, {center_y:.2f}, {base_z + spawn_height:.2f})")
+                print(f"  Will position robot at scene center: ({center_x:.2f}, {center_y:.2f}, {base_z + spawn_height:.2f})")
             else:
                 # Fallback if can't get bounds
                 initial_position = (0.0, 0.0, spawn_height)
@@ -170,18 +162,11 @@ def main():
     else:
         # Default ground plane
         initial_position = (0.0, 0.0, 0.5)
-        print("  Positioning robot on default ground plane")
+        print("  Will position robot on default ground plane")
 
-    # Use spawn_simple_robot for better physics (box-shaped robot)
-    robot_prim = robot.spawn_simple_robot(
-        position=initial_position,
-        size=(0.5, 0.5, 0.3)  # 50cm x 50cm x 30cm box
-    )
-
-    print(f"✓ Spawned robot at: {initial_position}")
-    print(f"  Prim path: {robot_prim}")
-    print(f"  Robot type: Simple box with physics")
-    print(f"  Camera enabled: {robot.has_camera()}")
+    print(f"✓ Robot configuration ready")
+    print(f"  Spawn position: {initial_position}")
+    print(f"  Robot will be spawned after world reset")
 
     # Step 4: Initialize navigation controller
     print("\n[Step 4] Initializing navigation controller...")
@@ -202,11 +187,39 @@ def main():
     controller.set_waypoint_path(waypoints)
     print(f"✓ Set navigation path with {len(waypoints)} waypoints")
 
-    # Step 5: Reset world to initialize physics
-    print("\n[Step 5] Initializing physics simulation...")
+    # Step 5: Initialize world and spawn robot
+    print("\n[Step 5] Initializing world and spawning robot...")
+
+    # IMPORTANT: Reset world FIRST to initialize scene
+    print("  Resetting world...")
     world.reset()
+    print("  ✓ World reset complete")
+
+    # NOW spawn the robot (after world.reset())
+    print("\n  Spawning robot in initialized world...")
+
+    robot = NavigationRobot(
+        robot_type="differential_drive",
+        name="nav_robot",
+        world=world,
+        camera_config=camera_config
+    )
+
+    # Spawn robot
+    robot_prim = robot.spawn_simple_robot(
+        position=initial_position,
+        size=(0.5, 0.5, 0.3)  # 50cm x 50cm x 30cm box
+    )
+
+    print(f"  ✓ Robot spawned at: {initial_position}")
+    print(f"  Prim path: {robot_prim}")
+    print(f"  Robot type: Simple box with physics")
+    print(f"  Camera enabled: {robot.has_camera()}")
+
+    # Play simulation
+    print("\n  Starting physics simulation...")
     simulator.play()
-    print("✓ World reset complete")
+    print("✓ Simulation started")
 
     # Let physics settle for a moment
     print("  Letting physics settle...")
@@ -309,7 +322,41 @@ def main():
 
     # Verify robot can move
     print(f"✓ Robot position: {robot.get_pose()[0]}")
-    print(f"✓ Robot is in world: {robot.robot_instance is not None if hasattr(robot, 'robot_instance') else 'Unknown'}")
+
+    # Check if robot is properly in world
+    robot_in_world = False
+    if hasattr(robot, 'robot_instance') and robot.robot_instance is not None:
+        robot_in_world = True
+        # Try to verify in scene
+        if hasattr(world.scene, 'get_object'):
+            obj = world.scene.get_object(robot.name)
+            if obj is not None:
+                print(f"✓ Robot verified in world scene: {robot.name}")
+            else:
+                print(f"! Robot not found in world scene!")
+                robot_in_world = False
+
+    print(f"✓ Robot is in world: {robot_in_world}")
+
+    if not robot_in_world:
+        print("\n" + "!" * 60)
+        print("ERROR: Robot is not in the world!")
+        print("!" * 60)
+        print("This will cause:")
+        print("  - Robot won't move (no physics)")
+        print("  - Camera won't work")
+        print("  - Navigation will fail")
+        print("\nPossible fixes:")
+        print("  1. Check world.scene.add() worked")
+        print("  2. Verify IsaacSim initialized properly")
+        print("  3. Try world.reset() before spawning")
+        print("!" * 60)
+
+        # Don't continue if robot isn't in world
+        robot.stop()
+        simulator.shutdown()
+        return
+
     print()
 
     # Track saved image count
