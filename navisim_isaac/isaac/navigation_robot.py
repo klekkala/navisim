@@ -8,12 +8,12 @@ from typing import Tuple, Optional, Dict, Any
 import numpy as np
 
 # IsaacSim 5.0 imports
+# Note: Camera is imported later in _initialize_camera() after SimulationApp is ready
 try:
     from omni.isaac.core.robots import Robot
     from omni.isaac.wheeled_robots.robots import WheeledRobot
     from omni.isaac.core.objects import DynamicCuboid
     from omni.isaac.wheeled_robots.controllers.differential_controller import DifferentialController
-    from omni.isaac.sensor import Camera
     from omni.isaac.core.utils.prims import create_prim
     ISAAC_SIM_AVAILABLE = True
 except ImportError:
@@ -350,6 +350,8 @@ class NavigationRobot:
         """
         Initialize RGB camera sensor attached to the robot.
         The camera is mounted on the robot to capture first-person view images.
+
+        IMPORTANT: Camera must be imported AFTER SimulationApp is initialized.
         """
         if not ISAAC_SIM_AVAILABLE or not self.is_spawned:
             print("[Simulation Mode] Camera initialization skipped")
@@ -359,6 +361,11 @@ class NavigationRobot:
         camera_prim_path = f"{self.prim_path}/Camera"
 
         try:
+            # Import Camera AFTER SimulationApp is ready (not at top level)
+            from omni.isaac.sensor import Camera
+
+            print(f"Initializing camera at: {camera_prim_path}")
+
             # Create camera sensor
             self.camera = Camera(
                 prim_path=camera_prim_path,
@@ -376,12 +383,18 @@ class NavigationRobot:
             # Initialize camera (start data collection)
             self.camera.initialize()
 
-            print(f"✓ Camera initialized: {camera_prim_path}")
+            print(f"✓ Camera initialized successfully!")
             print(f"  Resolution: {self.camera_config['width']}x{self.camera_config['height']}")
             print(f"  Position (relative): {self.camera_config['position']}")
 
+        except ImportError as e:
+            print(f"Warning: Could not import Camera module: {e}")
+            print(f"  Make sure SimulationApp is initialized first")
+            self.camera = None
         except Exception as e:
             print(f"Warning: Could not initialize camera: {e}")
+            import traceback
+            traceback.print_exc()
             self.camera = None
 
     def get_camera_image(self) -> Optional[np.ndarray]:
@@ -391,8 +404,8 @@ class NavigationRobot:
         Returns:
             RGB image as numpy array (H, W, 3) with dtype uint8, or None if unavailable
         """
-        if not ISAAC_SIM_AVAILABLE or self.camera is None:
-            # Return placeholder in simulation mode
+        if self.camera is None:
+            # Return placeholder in simulation mode or if camera not initialized
             height = self.camera_config['height']
             width = self.camera_config['width']
             return np.zeros((height, width, 3), dtype=np.uint8)
@@ -403,6 +416,7 @@ class NavigationRobot:
             frame = self.camera.get_rgba()
 
             if frame is None:
+                print("Warning: Camera returned None frame")
                 return None
 
             # Convert to uint8 and extract RGB channels
@@ -412,6 +426,8 @@ class NavigationRobot:
 
         except Exception as e:
             print(f"Warning: Failed to capture camera image: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def has_camera(self) -> bool:

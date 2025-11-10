@@ -168,9 +168,17 @@ def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_output_dir = output_dir / f"run_{timestamp}"
     run_output_dir.mkdir(exist_ok=True)
-    print(f"✓ Images will be saved to: {run_output_dir}\n")
+    print(f"✓ Images will be saved to: {run_output_dir}")
+
+    # Debug: Check camera and PIL status
+    print(f"✓ Camera enabled: {robot.has_camera()}")
+    print(f"✓ PIL available: {PIL_AVAILABLE}")
+    print()
 
     simulator.play()
+
+    # Track saved image count
+    images_saved = 0
 
     try:
         step_count = 0
@@ -195,21 +203,41 @@ def main():
             step_count += 1
 
             # Capture and save camera image periodically
-            if robot.has_camera() and step_count % save_interval == 0:
-                image = robot.get_camera_image()
-                if image is not None and PIL_AVAILABLE:
-                    # Save image with step number
-                    image_path = run_output_dir / f"step_{step_count:05d}.png"
-                    Image.fromarray(image).save(image_path)
+            if step_count % save_interval == 0:
+                if not robot.has_camera():
+                    if step_count == save_interval:  # Print once
+                        print("! Camera not available - skipping image capture")
+                elif not PIL_AVAILABLE:
+                    if step_count == save_interval:  # Print once
+                        print("! PIL not available - skipping image capture")
+                else:
+                    # Get camera image
+                    image = robot.get_camera_image()
 
-                    # Also save a metadata file with robot state
-                    metadata_path = run_output_dir / f"step_{step_count:05d}.txt"
-                    with open(metadata_path, 'w') as f:
-                        f.write(f"Step: {step_count}\n")
-                        f.write(f"Position: {position[0]:.3f}, {position[1]:.3f}, {position[2]:.3f}\n")
-                        f.write(f"Waypoint: {controller.waypoint_index}/{len(waypoints)}\n")
-                        f.write(f"Linear Velocity: {linear_vel:.3f} m/s\n")
-                        f.write(f"Angular Velocity: {angular_vel:.3f} rad/s\n")
+                    if image is None:
+                        if step_count == save_interval:  # Print once
+                            print("! Camera returned None - check camera initialization")
+                    else:
+                        try:
+                            # Save image with step number
+                            image_path = run_output_dir / f"step_{step_count:05d}.png"
+                            Image.fromarray(image).save(image_path)
+
+                            # Also save a metadata file with robot state
+                            metadata_path = run_output_dir / f"step_{step_count:05d}.txt"
+                            with open(metadata_path, 'w') as f:
+                                f.write(f"Step: {step_count}\n")
+                                f.write(f"Position: {position[0]:.3f}, {position[1]:.3f}, {position[2]:.3f}\n")
+                                f.write(f"Waypoint: {controller.waypoint_index}/{len(waypoints)}\n")
+                                f.write(f"Linear Velocity: {linear_vel:.3f} m/s\n")
+                                f.write(f"Angular Velocity: {angular_vel:.3f} rad/s\n")
+
+                            images_saved += 1
+
+                            if images_saved == 1:
+                                print(f"✓ First image saved to: {image_path.name}")
+                        except Exception as e:
+                            print(f"! Error saving image at step {step_count}: {e}")
 
             # Print progress every 60 steps (~1 second)
             if step_count % 60 == 0:
@@ -235,7 +263,12 @@ def main():
 
     # Count saved images
     saved_images = list(run_output_dir.glob("*.png"))
-    print(f"✓ Saved {len(saved_images)} camera images to: {run_output_dir}")
+    print(f"\n✓ Total images saved: {images_saved}")
+    print(f"✓ Images verified in directory: {len(saved_images)}")
+    if len(saved_images) > 0:
+        print(f"✓ Image directory: {run_output_dir}")
+    else:
+        print(f"! No images saved - check camera initialization and PIL availability")
 
     print("\n" + "=" * 60)
     print("Navigation Example Complete!")
