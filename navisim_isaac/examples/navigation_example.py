@@ -11,6 +11,8 @@ Demonstrates how to:
 import sys
 import numpy as np
 from pathlib import Path
+from datetime import datetime
+import os
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -20,6 +22,14 @@ from navisim_isaac.isaac.simulator import IsaacSimulator
 from navisim_isaac.isaac.navigation_robot import NavigationRobot
 from navisim_isaac.isaac.navigation_controller import NavigationController
 from navisim_isaac.isaac.terrain import TerrainManager
+
+# Try to import PIL for image saving
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    print("Warning: PIL not available. Install with: pip install Pillow")
 
 
 def main():
@@ -92,12 +102,24 @@ def main():
         print(f"! Sector USD not found: {sector_usd_path}")
         print("  Continuing with default ground plane...")
 
-    # Step 3: Spawn navigation robot
-    print("\n[Step 3] Spawning navigation robot...")
+    # Step 3: Spawn navigation robot with camera
+    print("\n[Step 3] Spawning navigation robot with camera...")
+
+    # Camera configuration for capturing navigation images
+    camera_config = {
+        'width': 640,  # Higher resolution for better visualization
+        'height': 480,
+        'position': (0.3, 0.0, 0.2),  # Mount 30cm forward, 20cm up from robot center
+        'orientation': (0.0, 0.0, 0.0, 1.0),  # Looking forward
+        'horizontal_aperture': 20.955,
+        'focal_length': 24.0
+    }
+
     robot = NavigationRobot(
         robot_type="differential_drive",
         name="nav_robot",
-        world=world
+        world=world,
+        camera_config=camera_config
     )
 
     # Spawn robot at initial position
@@ -108,6 +130,7 @@ def main():
     )
     print(f"✓ Spawned robot at: {initial_position}")
     print(f"  Prim path: {robot_prim}")
+    print(f"  Camera enabled: {robot.has_camera()}")
 
     # Step 4: Initialize navigation controller
     print("\n[Step 4] Initializing navigation controller...")
@@ -133,15 +156,26 @@ def main():
     world.reset()
     print("✓ World reset complete")
 
-    # Step 6: Start simulation
+    # Step 6: Start simulation with image capture
     print("\n[Step 6] Starting navigation simulation...")
     print("Press Ctrl+C to stop\n")
+
+    # Create output directory for images
+    output_dir = Path(__file__).parent / "navigation_output"
+    output_dir.mkdir(exist_ok=True)
+
+    # Create timestamped subfolder for this run
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_output_dir = output_dir / f"run_{timestamp}"
+    run_output_dir.mkdir(exist_ok=True)
+    print(f"✓ Images will be saved to: {run_output_dir}\n")
 
     simulator.play()
 
     try:
         step_count = 0
         max_steps = 3000  # ~50 seconds at 60Hz
+        save_interval = 30  # Save image every 30 steps (~0.5 seconds at 60Hz)
 
         while step_count < max_steps:
             # Get current robot state
@@ -159,6 +193,23 @@ def main():
             # Step simulation
             simulator.step(num_steps=1)
             step_count += 1
+
+            # Capture and save camera image periodically
+            if robot.has_camera() and step_count % save_interval == 0:
+                image = robot.get_camera_image()
+                if image is not None and PIL_AVAILABLE:
+                    # Save image with step number
+                    image_path = run_output_dir / f"step_{step_count:05d}.png"
+                    Image.fromarray(image).save(image_path)
+
+                    # Also save a metadata file with robot state
+                    metadata_path = run_output_dir / f"step_{step_count:05d}.txt"
+                    with open(metadata_path, 'w') as f:
+                        f.write(f"Step: {step_count}\n")
+                        f.write(f"Position: {position[0]:.3f}, {position[1]:.3f}, {position[2]:.3f}\n")
+                        f.write(f"Waypoint: {controller.waypoint_index}/{len(waypoints)}\n")
+                        f.write(f"Linear Velocity: {linear_vel:.3f} m/s\n")
+                        f.write(f"Angular Velocity: {angular_vel:.3f} rad/s\n")
 
             # Print progress every 60 steps (~1 second)
             if step_count % 60 == 0:
@@ -182,10 +233,15 @@ def main():
     simulator.pause()
     print("✓ Simulation paused")
 
+    # Count saved images
+    saved_images = list(run_output_dir.glob("*.png"))
+    print(f"✓ Saved {len(saved_images)} camera images to: {run_output_dir}")
+
     print("\n" + "=" * 60)
     print("Navigation Example Complete!")
     print("=" * 60)
-    print("\nTo close: Stop the simulation and close IsaacSim")
+    print(f"\nCamera images saved to: {run_output_dir}")
+    print("To close: Stop the simulation and close IsaacSim")
 
 
 def test_simple_navigation():
