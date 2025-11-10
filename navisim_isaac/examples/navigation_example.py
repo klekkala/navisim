@@ -8,8 +8,12 @@ Demonstrates how to:
 4. Control the robot to navigate waypoints
 """
 
+import sys
 import numpy as np
 from pathlib import Path
+
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # NaviSim-Isaac imports
 from navisim_isaac.isaac.simulator import IsaacSimulator
@@ -40,6 +44,21 @@ def main():
     # Get world and stage
     world = simulator.get_world()
     stage = simulator.get_stage()
+
+    # Check if IsaacSim is properly initialized
+    if world is None:
+        print("\n" + "=" * 60)
+        print("ERROR: IsaacSim is not available!")
+        print("=" * 60)
+        print("\nThis example requires Isaac Sim to run.")
+        print("\nTo run this example:")
+        print("1. Install Isaac Sim from: https://developer.nvidia.com/isaac-sim")
+        print("2. Run using Isaac Sim's Python:")
+        print("   ~/.local/share/ov/pkg/isaac_sim-*/python.sh navisim_isaac/examples/navigation_example.py")
+        print("\nAlternatively, use the RL training example which has better fallback:")
+        print("   python navisim_isaac/examples/train_rl.py --mode random")
+        print("=" * 60)
+        return
 
     # Step 2: Load sector USD scene (if available)
     print("\n[Step 2] Loading sector scene...")
@@ -179,6 +198,13 @@ def test_simple_navigation():
     simulator = IsaacSimulator()
     simulator.initialize()
     world = simulator.get_world()
+
+    # Check if IsaacSim is available
+    if world is None:
+        print("\nERROR: IsaacSim is not available!")
+        print("This example requires Isaac Sim. Please install it first.")
+        print("See: https://developer.nvidia.com/isaac-sim")
+        return
 
     # Spawn simple robot
     robot = NavigationRobot(name="test_robot", world=world)
