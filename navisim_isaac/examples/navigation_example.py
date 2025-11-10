@@ -187,16 +187,11 @@ def main():
     controller.set_waypoint_path(waypoints)
     print(f"✓ Set navigation path with {len(waypoints)} waypoints")
 
-    # Step 5: Initialize world and spawn robot
-    print("\n[Step 5] Initializing world and spawning robot...")
+    # Step 5: Spawn robot and initialize world
+    print("\n[Step 5] Spawning robot and initializing physics...")
 
-    # IMPORTANT: Reset world FIRST to initialize scene
-    print("  Resetting world...")
-    world.reset()
-    print("  ✓ World reset complete")
-
-    # NOW spawn the robot (after world.reset())
-    print("\n  Spawning robot in initialized world...")
+    # STEP 1: Create and spawn robot FIRST (adds to scene)
+    print("  Creating robot...")
 
     robot = NavigationRobot(
         robot_type="differential_drive",
@@ -205,18 +200,37 @@ def main():
         camera_config=camera_config
     )
 
-    # Spawn robot
+    print("  Spawning robot...")
     robot_prim = robot.spawn_simple_robot(
         position=initial_position,
         size=(0.5, 0.5, 0.3)  # 50cm x 50cm x 30cm box
     )
 
-    print(f"  ✓ Robot spawned at: {initial_position}")
+    print(f"  ✓ Robot created at: {initial_position}")
     print(f"  Prim path: {robot_prim}")
-    print(f"  Robot type: Simple box with physics")
-    print(f"  Camera enabled: {robot.has_camera()}")
 
-    # Play simulation
+    # Check robot was added to scene
+    print("\n  Verifying robot in scene...")
+    print(f"  robot.robot_instance: {robot.robot_instance}")
+    print(f"  robot.is_spawned: {robot.is_spawned}")
+
+    if robot.robot_instance is None:
+        print("\n! ERROR: robot.robot_instance is None!")
+        print("  Robot was not created properly")
+        simulator.shutdown()
+        return
+
+    # STEP 2: THEN call world.reset() to initialize the robot
+    print("\n  Resetting world to initialize robot physics...")
+    world.reset()
+    print("  ✓ World reset complete - robot initialized")
+
+    # Verify robot is still valid after reset
+    print(f"  robot.robot_instance after reset: {robot.robot_instance}")
+    if hasattr(robot.robot_instance, 'is_valid'):
+        print(f"  robot is_valid: {robot.robot_instance.is_valid()}")
+
+    # STEP 3: THEN play simulation
     print("\n  Starting physics simulation...")
     simulator.play()
     print("✓ Simulation started")
@@ -326,17 +340,28 @@ def main():
     # Check if robot is properly in world
     robot_in_world = False
     if hasattr(robot, 'robot_instance') and robot.robot_instance is not None:
-        robot_in_world = True
-        # Try to verify in scene
-        if hasattr(world.scene, 'get_object'):
-            obj = world.scene.get_object(robot.name)
-            if obj is not None:
-                print(f"✓ Robot verified in world scene: {robot.name}")
-            else:
-                print(f"! Robot not found in world scene!")
-                robot_in_world = False
+        print(f"✓ robot.robot_instance exists: {type(robot.robot_instance)}")
 
-    print(f"✓ Robot is in world: {robot_in_world}")
+        # Check if instance is valid
+        if hasattr(robot.robot_instance, 'is_valid'):
+            is_valid = robot.robot_instance.is_valid()
+            print(f"  robot_instance.is_valid(): {is_valid}")
+            robot_in_world = is_valid
+        else:
+            robot_in_world = True
+
+        # Try to get position to verify physics is working
+        try:
+            pos, orn = robot.get_pose()
+            print(f"  robot.get_pose() works: position={pos}")
+            robot_in_world = True
+        except Exception as e:
+            print(f"  ! robot.get_pose() failed: {e}")
+            robot_in_world = False
+    else:
+        print(f"✗ robot.robot_instance is None or doesn't exist")
+
+    print(f"\n{'✓' if robot_in_world else '✗'} Robot is in world: {robot_in_world}")
 
     if not robot_in_world:
         print("\n" + "!" * 60)
