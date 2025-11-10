@@ -73,6 +73,8 @@ class NaviSimIsaacApp:
         self.robot: Optional[NavigationRobot] = None
         self.controller: Optional[NavigationController] = None
         self.terrain_manager: Optional[TerrainManager] = None
+        self.sequence_graph = None
+        self.current_sector = None
 
         # State
         self.is_initialized = False
@@ -324,11 +326,170 @@ class NaviSimIsaacApp:
             self.simulator.pause()
             logger.info("\n✓ Test complete")
 
+    def load_sequence_graph(self, graph_path: str) -> None:
+        """
+        Load navigation sequence graph.
+
+        Args:
+            graph_path: Path to pickled NetworkX graph file
+
+        Raises:
+            FileNotFoundError: If graph file not found
+        """
+        from navisim_isaac.navisim.world.sequence_graph import SequenceGraph
+
+        logger.info(f"\nLoading sequence graph from: {graph_path}")
+        self.sequence_graph = SequenceGraph(graph_path)
+
+        sector_ids = self.sequence_graph.get_sector_ids()
+        logger.info(f"✓ Loaded {len(sector_ids)} sectors")
+        logger.info(f"  Sectors: {sector_ids[:5]}{'...' if len(sector_ids) > 5 else ''}")
+
+    def load_sector(self, sector_id: str, enable_physics: bool = True) -> None:
+        """
+        Load a sector's USD scene into IsaacSim.
+
+        Args:
+            sector_id: Sector identifier
+            enable_physics: Whether to enable physics collisions
+
+        Raises:
+            RuntimeError: If sequence graph not loaded
+            KeyError: If sector not found
+        """
+        if self.sequence_graph is None:
+            raise RuntimeError("Sequence graph not loaded. Call load_sequence_graph() first.")
+
+        if not self.is_initialized:
+            raise RuntimeError("App not initialized. Call initialize() first.")
+
+        # Get sector from graph
+        sector = self.sequence_graph.get_sector(sector_id)
+        logger.info(f"\nLoading sector: {sector_id}")
+        logger.info(f"  USD path: {sector.usd_path}")
+
+        # Unload previous sector if exists
+        if self.current_sector:
+            logger.info(f"  Unloading previous sector: {self.current_sector.sector_id}")
+            self.current_sector.unload_all()
+
+        # Check if USD file exists
+        if not sector.has_usd_file():
+            logger.error(f"  USD file not found: {sector.usd_path}")
+            raise FileNotFoundError(f"USD file not found: {sector.usd_path}")
+
+        # Load USD scene
+        self.load_sector_usd(
+            usd_path=sector.scene_path,
+            position=(0.0, 0.0, 0.0),
+            enable_physics=enable_physics
+        )
+
+        self.current_sector = sector
+        logger.info(f"✓ Sector {sector_id} loaded successfully")
+
+    def run_sequence_graph_navigation(
+        self,
+        start_sector_id: Optional[str] = None,
+        max_steps_per_sector: int = 1000
+    ) -> None:
+        """
+        Run navigation through sequence graph sectors.
+
+        Args:
+            start_sector_id: Starting sector ID (uses first sector if None)
+            max_steps_per_sector: Max steps before moving to next sector
+        """
+        if self.sequence_graph is None:
+            raise RuntimeError("Sequence graph not loaded")
+
+        logger.info("\n" + "=" * 70)
+        logger.info("Sequence Graph Navigation")
+        logger.info("=" * 70)
+
+        # Get starting sector
+        if start_sector_id is None:
+            sector_ids = self.sequence_graph.get_sector_ids()
+            if not sector_ids:
+                logger.error("No sectors in graph")
+                return
+            start_sector_id = sector_ids[0]
+
+        # Load first sector
+        self.load_sector(start_sector_id)
+        self.sequence_graph.set_current_node(start_sector_id)
+
+        logger.info(f"\nStarting at sector: {start_sector_id}")
+        logger.info("Press Ctrl+C to stop\n")
+
+        # Reset world
+        self.world.reset()
+        self.simulator.play()
+
+        try:
+            step_count = 0
+            sector_steps = 0
+
+            while True:
+                # Get current robot state
+                position, orientation = self.robot.get_pose()
+
+                # Simple forward motion for demo
+                linear_vel = 0.5
+                angular_vel = 0.0
+
+                # Apply velocity
+                self.robot.set_velocity(linear_vel, angular_vel)
+
+                # Step simulation
+                self.simulator.step(num_steps=1)
+                step_count += 1
+                sector_steps += 1
+
+                # Print progress
+                if step_count % 60 == 0:
+                    logger.info(
+                        f"Step {step_count:4d}: Sector={self.current_sector.sector_id}, "
+                        f"Pos=({position[0]:5.2f}, {position[1]:5.2f})"
+                    )
+
+                # Check if should move to next sector
+                if sector_steps >= max_steps_per_sector:
+                    logger.info(f"\nCompleted sector: {self.current_sector.sector_id}")
+
+                    # Try to get next sector
+                    next_sector_id = self.sequence_graph.request_next_node()
+
+                    if next_sector_id is None:
+                        logger.info("No more sectors to navigate")
+                        break
+
+                    logger.info(f"Moving to next sector: {next_sector_id}")
+
+                    # Load next sector
+                    self.load_sector(next_sector_id)
+
+                    # Reset robot position for new sector
+                    self.robot.set_pose(position=self.config['initial_position'])
+
+                    sector_steps = 0
+
+        except KeyboardInterrupt:
+            logger.info("\n\nNavigation interrupted by user")
+
+        finally:
+            self.robot.stop()
+            self.simulator.pause()
+            logger.info("\n✓ Sequence graph navigation complete")
+
     def shutdown(self) -> None:
         """Shutdown the application."""
         logger.info("\n" + "=" * 70)
         logger.info("Shutting down NaviSim-Isaac")
         logger.info("=" * 70)
+
+        if self.sequence_graph:
+            self.sequence_graph.unload_all_sectors()
 
         if self.robot:
             self.robot.stop()
@@ -480,9 +641,19 @@ Examples:
                 logger.error("--graph-path required for sequence_graph mode")
                 return 1
 
-            logger.info("Sequence graph mode not yet implemented")
-            # TODO: Implement sequence graph navigation
-            return 1
+            # Load sequence graph
+            graph_path = Path(args.graph_path)
+            if not graph_path.exists():
+                logger.error(f"Graph file not found: {graph_path}")
+                return 1
+
+            app.load_sequence_graph(str(graph_path))
+
+            # Run sequence graph navigation
+            app.run_sequence_graph_navigation(
+                start_sector_id=args.waypoints if args.waypoints else None,
+                max_steps_per_sector=args.max_steps
+            )
 
         logger.info("\n" + "=" * 70)
         logger.info("NaviSim-Isaac Session Complete!")
