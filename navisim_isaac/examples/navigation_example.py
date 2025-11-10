@@ -9,10 +9,8 @@ Demonstrates how to:
 """
 
 import sys
-import numpy as np
 from pathlib import Path
 from datetime import datetime
-import os
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))

@@ -138,10 +138,12 @@ class NavigationRobot:
         if self.world:
             self.world.scene.add(self.robot_instance)
 
+        # Mark as spawned BEFORE initializing camera (camera init checks this flag)
+        self.is_spawned = True
+
         # Initialize camera attached to robot
         self._initialize_camera()
 
-        self.is_spawned = True
         print(f"Spawned robot '{self.name}' at position {position}")
         print(f"Robot type: {self.robot_type}")
         print(f"Prim path: {self.prim_path}")
@@ -185,10 +187,12 @@ class NavigationRobot:
         if self.world:
             self.world.scene.add(self.robot_instance)
 
+        # Mark as spawned BEFORE initializing camera
+        self.is_spawned = True
+
         # Initialize camera attached to robot
         self._initialize_camera()
 
-        self.is_spawned = True
         print(f"Spawned simple robot at {position} with size {size}")
         return self.prim_path
 
