@@ -137,12 +137,39 @@ def main():
 
     # Determine initial position based on scene
     if scene_loaded:
-        # Place robot in center of USD scene (adjust based on your scene)
-        initial_position = (0.0, 0.0, 1.0)  # 1m above ground for safety
-        print("  Positioning robot in center of USD scene")
+        # For USD scenes, try to find a safe spawn position
+        # First attempt: query the USD bounds
+        spawn_height = 0.5  # Start 50cm above surface
+
+        try:
+            # Try to get scene bounds from the stage
+            from pxr import UsdGeom, Gf
+            scene_prim = stage.GetPrimAtPath("/World/Sector")
+
+            if scene_prim.IsValid():
+                bbox_cache = UsdGeom.BBoxCache(0, includedPurposes=[UsdGeom.Tokens.default_])
+                bbox = bbox_cache.ComputeWorldBound(scene_prim)
+                bounds = bbox.ComputeAlignedBox()
+
+                # Place robot near the center of the scene at spawn_height above min Z
+                center_x = (bounds.GetMin()[0] + bounds.GetMax()[0]) / 2.0
+                center_y = (bounds.GetMin()[1] + bounds.GetMax()[1]) / 2.0
+                base_z = bounds.GetMin()[2]
+
+                initial_position = (center_x, center_y, base_z + spawn_height)
+                print(f"  Scene bounds: {bounds.GetMin()} to {bounds.GetMax()}")
+                print(f"  Positioning robot at scene center: ({center_x:.2f}, {center_y:.2f}, {base_z + spawn_height:.2f})")
+            else:
+                # Fallback if can't get bounds
+                initial_position = (0.0, 0.0, spawn_height)
+                print("  Could not get scene bounds, using default center position")
+        except Exception as e:
+            print(f"  Warning: Could not compute scene bounds: {e}")
+            initial_position = (0.0, 0.0, spawn_height)
+            print("  Using default position")
     else:
         # Default ground plane
-        initial_position = (0.0, 0.0, 0.5)  # 0.5m above ground
+        initial_position = (0.0, 0.0, 0.5)
         print("  Positioning robot on default ground plane")
 
     # Use spawn_simple_robot for better physics (box-shaped robot)
@@ -187,24 +214,80 @@ def main():
         simulator.step(num_steps=1)
 
     # Check robot position after settling
-    pos_after_settle, _ = robot.get_pose()
+    pos_after_settle, orn_after_settle = robot.get_pose()
     print(f"  Robot position after physics settle: [{pos_after_settle[0]:.3f}, {pos_after_settle[1]:.3f}, {pos_after_settle[2]:.3f}]")
 
-    # Take initial snapshot
-    print("\n  Taking initial snapshot...")
+    # Take 4-directional snapshots to verify scene
+    print("\n  Taking 4-directional snapshots to verify scene...")
     output_dir = Path(__file__).parent / "navigation_output"
     output_dir.mkdir(exist_ok=True)
 
-    initial_image = robot.get_camera_image()
-    if initial_image is not None and PIL_AVAILABLE:
+    if robot.has_camera() and PIL_AVAILABLE:
         try:
             from PIL import Image as PILImage
-            snapshot_path = output_dir / "initial_snapshot.png"
-            PILImage.fromarray(initial_image).save(snapshot_path)
-            print(f"  ✓ Initial snapshot saved to: {snapshot_path}")
-            print(f"    This shows the robot's view at start position")
+            import math
+
+            # Save original orientation
+            original_position = pos_after_settle.copy()
+            original_orientation = orn_after_settle.copy()
+
+            # Take snapshots at 4 angles: 0°, 90°, 180°, 270°
+            angles = [0, 90, 180, 270]
+            snapshot_count = 0
+
+            for angle in angles:
+                # Calculate quaternion for rotation around Z-axis
+                angle_rad = math.radians(angle)
+                quat_z = math.sin(angle_rad / 2.0)
+                quat_w = math.cos(angle_rad / 2.0)
+                new_orientation = (0.0, 0.0, quat_z, quat_w)
+
+                # Set robot orientation
+                robot.set_pose(
+                    position=original_position,
+                    orientation=new_orientation
+                )
+
+                # Let physics update
+                for _ in range(10):
+                    simulator.step(num_steps=1)
+
+                # Capture image
+                image = robot.get_camera_image()
+
+                if image is not None:
+                    snapshot_path = output_dir / f"initial_{angle:03d}deg.png"
+                    PILImage.fromarray(image).save(snapshot_path)
+                    snapshot_count += 1
+                    print(f"    ✓ Snapshot at {angle:3d}°: {snapshot_path.name}")
+                else:
+                    print(f"    ✗ Failed to capture at {angle:3d}°")
+
+            # Restore original orientation
+            robot.set_pose(
+                position=original_position,
+                orientation=original_orientation
+            )
+
+            # Let physics settle again
+            for _ in range(10):
+                simulator.step(num_steps=1)
+
+            print(f"  ✓ Saved {snapshot_count}/4 directional snapshots")
+            print(f"  Check these images to verify:")
+            print(f"    - Robot is on the surface (not floating/underground)")
+            print(f"    - USD scene is visible and loaded correctly")
+            print(f"    - Camera is working properly")
+
         except Exception as e:
-            print(f"  ! Could not save snapshot: {e}")
+            print(f"  ! Could not save snapshots: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        if not robot.has_camera():
+            print("  ! Camera not available - skipping snapshots")
+        if not PIL_AVAILABLE:
+            print("  ! PIL not available - install with: pip install Pillow")
 
     # Step 6: Start simulation with image capture
     print("\n[Step 6] Starting navigation simulation...")
