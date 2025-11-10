@@ -13,6 +13,8 @@ try:
     from omni.isaac.wheeled_robots.robots import WheeledRobot
     from omni.isaac.core.objects import DynamicCuboid
     from omni.isaac.wheeled_robots.controllers.differential_controller import DifferentialController
+    from omni.isaac.sensor import Camera
+    from omni.isaac.core.utils.prims import create_prim
     ISAAC_SIM_AVAILABLE = True
 except ImportError:
     ISAAC_SIM_AVAILABLE = False
@@ -35,7 +37,8 @@ class NavigationRobot:
         self,
         robot_type: str = "differential_drive",
         name: str = "nav_robot",
-        world=None
+        world=None,
+        camera_config: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize NavigationRobot.
@@ -44,6 +47,7 @@ class NavigationRobot:
             robot_type: Type of robot ("differential_drive", "ackermann", "omnidirectional")
             name: Unique name for the robot instance
             world: IsaacSim World instance
+            camera_config: Camera configuration dictionary
         """
         self.robot_type = robot_type
         self.name = name
@@ -52,6 +56,7 @@ class NavigationRobot:
         self.is_spawned = False
         self.robot_instance = None
         self.controller = None
+        self.camera = None
 
         # Robot state
         self.position = np.array([0.0, 0.0, 0.0])  # (x, y, z)
@@ -64,6 +69,16 @@ class NavigationRobot:
         self.wheel_base = 0.5    # meters (distance between wheels)
         self.max_linear_speed = 2.0   # m/s
         self.max_angular_speed = 2.0  # rad/s
+
+        # Camera configuration
+        self.camera_config = camera_config or {
+            'width': 84,
+            'height': 84,
+            'position': (0.3, 0.0, 0.2),  # Relative to robot center
+            'orientation': (0.0, 0.0, 0.0, 1.0),  # Looking forward
+            'horizontal_aperture': 20.955,  # Field of view
+            'focal_length': 24.0
+        }
 
     def spawn(
         self,
@@ -123,6 +138,9 @@ class NavigationRobot:
         if self.world:
             self.world.scene.add(self.robot_instance)
 
+        # Initialize camera attached to robot
+        self._initialize_camera()
+
         self.is_spawned = True
         print(f"Spawned robot '{self.name}' at position {position}")
         print(f"Robot type: {self.robot_type}")
@@ -166,6 +184,9 @@ class NavigationRobot:
         # Add to world scene
         if self.world:
             self.world.scene.add(self.robot_instance)
+
+        # Initialize camera attached to robot
+        self._initialize_camera()
 
         self.is_spawned = True
         print(f"Spawned simple robot at {position} with size {size}")
@@ -324,6 +345,83 @@ class NavigationRobot:
             print(f"Removing robot from scene: {self.prim_path}")
             self.is_spawned = False
             self.prim_path = None
+
+    def _initialize_camera(self) -> None:
+        """
+        Initialize RGB camera sensor attached to the robot.
+        The camera is mounted on the robot to capture first-person view images.
+        """
+        if not ISAAC_SIM_AVAILABLE or not self.is_spawned:
+            print("[Simulation Mode] Camera initialization skipped")
+            return
+
+        # Camera prim path (attached to robot)
+        camera_prim_path = f"{self.prim_path}/Camera"
+
+        try:
+            # Create camera sensor
+            self.camera = Camera(
+                prim_path=camera_prim_path,
+                name=f"{self.name}_camera",
+                position=np.array(self.camera_config['position']),
+                orientation=np.array(self.camera_config['orientation']),
+                frequency=30,  # 30 Hz capture rate
+                resolution=(self.camera_config['width'], self.camera_config['height'])
+            )
+
+            # Set camera properties
+            self.camera.set_horizontal_aperture(self.camera_config['horizontal_aperture'])
+            self.camera.set_focal_length(self.camera_config['focal_length'])
+
+            # Initialize camera (start data collection)
+            self.camera.initialize()
+
+            print(f"✓ Camera initialized: {camera_prim_path}")
+            print(f"  Resolution: {self.camera_config['width']}x{self.camera_config['height']}")
+            print(f"  Position (relative): {self.camera_config['position']}")
+
+        except Exception as e:
+            print(f"Warning: Could not initialize camera: {e}")
+            self.camera = None
+
+    def get_camera_image(self) -> Optional[np.ndarray]:
+        """
+        Get RGB image from the robot's camera.
+
+        Returns:
+            RGB image as numpy array (H, W, 3) with dtype uint8, or None if unavailable
+        """
+        if not ISAAC_SIM_AVAILABLE or self.camera is None:
+            # Return placeholder in simulation mode
+            height = self.camera_config['height']
+            width = self.camera_config['width']
+            return np.zeros((height, width, 3), dtype=np.uint8)
+
+        try:
+            # Get RGB data from camera
+            # The camera returns RGBA, we extract RGB
+            frame = self.camera.get_rgba()
+
+            if frame is None:
+                return None
+
+            # Convert to uint8 and extract RGB channels
+            rgb_image = (frame[:, :, :3] * 255).astype(np.uint8)
+
+            return rgb_image
+
+        except Exception as e:
+            print(f"Warning: Failed to capture camera image: {e}")
+            return None
+
+    def has_camera(self) -> bool:
+        """
+        Check if robot has an active camera.
+
+        Returns:
+            True if camera is initialized and available
+        """
+        return self.camera is not None
 
     def __repr__(self) -> str:
         """String representation of robot."""
