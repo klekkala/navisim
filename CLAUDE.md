@@ -8,7 +8,7 @@ Navisim is a high-fidelity simulation toolkit for evaluating autonomous navigati
 
 The repository contains two main packages:
 1. **navisim**: Core simulation toolkit with rendering, spatial data structures, and environment management
-2. **navisim_isaac**: Integration layer for Isaac Sim for physics-based RL navigation
+2. **navisim_isaacsim**: Integration layer for Isaac Sim for physics-based RL navigation
 
 ## Development Environment
 
@@ -98,26 +98,64 @@ make rebuild   # Clean + rebuild C++ bindings
 - `config/gaussian_model_param.py`: Gaussian Splatting parameters
 - `config/pipeline.py`: Pipeline configuration
 
-### Isaac Integration (navisim_isaac/)
+### Isaac Integration (navisim_isaacsim/)
 
-**NaviSim Components** (`navisim_isaac/navisim/`):
-- `world/sequence_graph.py`: Loads navigation graph from pickle
-- `world/sector.py`: Sector with lazy-loaded height field, USDZ, and boundary data
-- `spaces/`: Height fields, USDZ loader, boundary polygons, elevation map generator
-- `converters.py`: Data format converters between NaviSim and IsaacSim
+**Overview**: Integration layer built on [NVIDIA Isaac Lab](https://isaac-sim.github.io/IsaacLab) for physics-based RL navigation with photorealistic rendering from NaviSim.
 
-**IsaacSim Integration** (`navisim_isaac/isaac/`):
-- `simulator.py`: Main IsaacSim environment interface
-- `physx.py`: PhysX collision detection
-- `terrain.py`: Terrain and height field management
+**Current Implementation**:
+- `tasks/navigation_task.py`: NavigationTask using IsaacLab's InteractiveScene for Jetbot navigation
+- `scene/warehouse_scene_cfg.py`: NavisimWarehouseSceneCfg defining scene layout (warehouse, lighting, robot)
+- `assets/jetbot_cfg.py`: ArticulationCfg for Jetbot robot with ImplicitActuatorCfg for wheel control
+- `configs/paths.py`: Isaac Nucleus asset paths (warehouse USD, Jetbot USD)
+- `envs/environment.py`: Gymnasium wrapper around NavigationTask
+- `scripts/run.py`: AppLauncher-based script to run navigation task
 
-**RL Interface** (`navisim_isaac/gymnasium/`):
-- `env.py`: Gymnasium-compatible environment
-- `agent.py`: Navigation agent interface
-- `rl.py`: RL training utilities
+**IsaacLab Architecture Patterns**:
 
-**Configuration**:
-- `config/default_config.yaml`: YAML configuration for all components
+*Scene Configuration*: Uses `InteractiveSceneCfg` with declarative asset definitions
+- Assets defined as class attributes (e.g., `warehouse`, `jetbot`, `dome_light`)
+- Spawned via `sim_utils.UsdFileCfg` for USD assets or procedural spawn configs
+- Articulations use `ArticulationCfg` with actuator definitions via regex joint patterns
+
+*Task Implementation*: Custom task class with manual SimulationContext management
+- `NavigationTask.__init__()`: Creates SimulationContext, InteractiveScene, initializes state tensors
+- `reset()`: Resets robot to default root/joint states relative to env_origins
+- `step(actions)`: Applies joint velocity targets, steps physics, updates scene, computes rewards
+- Uses PyTorch tensors for all state/action/reward data
+
+*Running Tasks*:
+```bash
+cd navisim_isaacsim
+python scripts/run.py --num_envs 1
+```
+AppLauncher handles Isaac Sim initialization and provides simulation_app instance
+
+**IsaacLab Key Concepts**:
+
+*Manager-Based vs Direct Workflow*:
+- **Manager-Based**: Modular approach using ObservationManager, ActionManager, RewardManager, EventManager
+  - Promotes collaboration and configuration-driven development
+  - Environment inherits from `ManagerBasedRLEnv`
+- **Direct Workflow**: All logic in single task class, more transparent, better for optimization
+  - Inherits from `DirectRLEnv`, implements `_get_observations()`, `_get_rewards()`, `_apply_action()`, etc.
+  - Current implementation uses custom pattern similar to direct workflow
+
+*InteractiveScene*: Central scene management system
+- Handles multi-environment cloning and spacing via `env_spacing` parameter
+- Provides dictionary-style access to assets (e.g., `scene["jetbot"]`)
+- Manages `env_origins` for parallelized environment offsets
+- Call `scene.update(dt)` after each physics step to refresh data
+
+*Articulation API*:
+- `write_root_pose_to_sim()` / `write_joint_state_to_sim()`: Write states to simulation
+- `set_joint_velocity_target()`: Apply velocity commands (for ImplicitActuator)
+- `data.root_state_w`: World-frame root state tensor (pos, quat, lin_vel, ang_vel)
+- `data.default_root_state` / `data.default_joint_pos`: Reset defaults
+
+*Environment Registration*:
+- Use `gymnasium.register()` with `"Isaac-TaskName-RobotName-v0"` naming convention
+- Specify `entry_point` (env class) and `env_cfg_entry_point` (config class or YAML)
+- Import package `__init__.py` to trigger registration before `gymnasium.make()`
 
 ## Key Design Patterns
 
@@ -175,6 +213,31 @@ When adding new spatial data types:
 3. Test: `python test_cpp_module.py`
 4. Important: Include paths are configured in `setup.py` via `Pybind11Extension`
 
+### Working with IsaacLab Tasks
+
+**Running the navigation task**:
+```bash
+cd navisim_isaacsim
+python scripts/run.py --num_envs 4 --headless
+```
+
+**Adding new assets to scene**:
+1. Define asset config in `assets/` (e.g., new robot ArticulationCfg)
+2. Add to scene config in `scene/` as class attribute
+3. Access in task via `self.scene["asset_name"]`
+
+**Modifying task behavior**:
+1. Edit `tasks/navigation_task.py`
+2. Modify `_compute_reward()` for custom reward logic
+3. Update `_get_obs()` to change observation structure
+4. Adjust `step()` for different action processing
+
+**Creating new scenes**:
+1. Inherit from `InteractiveSceneCfg` in `scene/`
+2. Define assets as class attributes with spawn configs
+3. Use `sim_utils.UsdFileCfg`, `GroundPlaneCfg`, or other spawn utilities
+4. Instantiate in task: `InteractiveScene(scene_cfg)`
+
 ### Git Workflow
 
 Branch naming convention:
@@ -187,6 +250,7 @@ Main branch: `main`
 
 ## Important Notes
 
+**Core NaviSim**:
 - **CUDA Support**: Optional but recommended for rendering performance. Falls back to CPU if unavailable.
 - **Gaussian Splatting Dependency**: Requires `third_party/gaussian_splatting` cloned via `make submodule-init`
 - **Asset Requirements**: Download `sequence_graph.gpickle` and `database.tar` from Google Drive (see README) before running environments
@@ -194,7 +258,17 @@ Main branch: `main`
 - **RocksDB Reset**: Call `reset_db()` in environment reset to ensure clean database state
 - **Python Version**: Requires Python 3.10 (specified in environment.yaml)
 
+**IsaacLab Integration**:
+- **Isaac Sim Required**: IsaacLab requires NVIDIA Isaac Sim installation (separate from this repo)
+- **AppLauncher Pattern**: Always use `AppLauncher` at script start before importing Isaac modules
+- **Tensor Device**: All state/action tensors are on GPU by default (`device="cuda:0"`), use `.cpu()` for numpy conversion
+- **Scene Update**: Must call `scene.update(dt)` after every `sim.step()` to refresh asset data
+- **Environment Origins**: Multi-env scenarios use `scene.env_origins` to offset positions, add this when resetting root states
+- **Isaac Nucleus Assets**: Built-in assets accessible via `ISAAC_NUCLEUS_DIR` path from `isaaclab.utils.assets`
+
 ## Troubleshooting
+
+**Core NaviSim**:
 
 **C++ compilation errors**: Ensure pybind11 is installed and C++14 compatible compiler is available
 
@@ -205,3 +279,15 @@ Main branch: `main`
 **Memory issues during rendering**: Check that sectors are being unloaded properly. Use `sector.unload_all()` to free GPU memory.
 
 **CUDA not available warnings**: Optional. Package works in CPU-only mode but with reduced rendering performance.
+
+**IsaacLab Integration**:
+
+**"Module 'isaaclab' not found"**: Ensure Isaac Sim and Isaac Lab are properly installed. Check PYTHONPATH includes Isaac Lab location.
+
+**AppLauncher import errors**: Import AppLauncher before any Isaac/Omniverse modules. Move `from isaaclab.app import AppLauncher` to top of script.
+
+**Scene assets not appearing**: Check USD paths in `configs/paths.py`. Verify `ISAAC_NUCLEUS_DIR` points to valid Isaac Sim nucleus directory.
+
+**PhysX warnings**: Normal for initial setup. Ensure `sim.reset()` is called after creating InteractiveScene.
+
+**Headless mode issues**: Use `--headless` flag with AppLauncher. Some features (like cameras) may require viewer mode.
