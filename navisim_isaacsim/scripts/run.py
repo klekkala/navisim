@@ -1,67 +1,117 @@
 # scripts/run.py
 
+"""Run Navisim navigation environment with Isaac Lab."""
+
 import argparse
+import torch
 from isaaclab.app import AppLauncher
+
+# ---------------------------------------------------
+# 1. Parse arguments (DO NOT import Isaac modules yet)
+# ---------------------------------------------------
+parser = argparse.ArgumentParser(description="Run Navisim navigation with Isaac Lab.")
+parser.add_argument("--num_envs", type=int, default=1, help="Number of parallel environments")
+parser.add_argument("--max_steps", type=int, default=1000, help="Maximum simulation steps")
+
+# AppLauncher injects: --headless, --enable_cameras, --device, etc.
+AppLauncher.add_app_launcher_args(parser)
+args = parser.parse_args()
+
+# ---------------------------------------------------
+# 2. Launch Isaac Sim (MUST happen before importing Isaac modules)
+# ---------------------------------------------------
+app_launcher = AppLauncher(args)
+simulation_app = app_launcher.app
+
+# ---------------------------------------------------
+# 3. Import Isaac Lab and Navisim modules AFTER launch
+# ---------------------------------------------------
+from configs.navigation_env_cfg import NavisimNavigationEnvCfg
+from tasks.navigation_env import NavisimNavigationEnv
 
 
 def main():
-    # ---------------------------------------------------
-    # 1. Parse arguments (DO NOT add --headless manually)
-    # ---------------------------------------------------
-    parser = argparse.ArgumentParser(description="Run Navisim with Isaac Lab.")
-    parser.add_argument("--num_envs", type=int, default=1)
-    parser.add_argument("--max_steps", type=int, default=500)
-
-
-    # AppLauncher injects: --headless, --no-window, --device, etc.
-    AppLauncher.add_app_launcher_args(parser)
-    args = parser.parse_args()
+    """Run navigation task with DirectRLEnv."""
 
     # ---------------------------------------------------
-    # 2. Launch Isaac Lab / SimulationApp (the RIGHT way)
+    # 4. Create environment configuration
     # ---------------------------------------------------
-    app_launcher = AppLauncher(args)
-    simulation_app = app_launcher.app   # <-- this *is* SimulationApp
+    env_cfg = NavisimNavigationEnvCfg()
+    env_cfg.scene.num_envs = args.num_envs
+    env_cfg.sim.device = args.device if hasattr(args, 'device') else "cuda:0"
 
     # ---------------------------------------------------
-    # 3. Import IsaacLab and Navisim modules AFTER launch
+    # 5. Create environment
     # ---------------------------------------------------
-    from tasks.navigation_task import NavigationTask
-
-    # ---------------------------------------------------
-    # 4. Create your RL task
-    # ---------------------------------------------------
-    task = NavigationTask(
-        num_envs=args.num_envs,
-        max_episode_len=args.max_steps,
+    env = NavisimNavigationEnv(
+        cfg=env_cfg,
+        render_mode="human" if not args.headless else None
     )
 
-    obs = task.reset()
+    print(f"\n{'='*80}")
+    print(f"[Navisim] Navigation Environment Created")
+    print(f"{'='*80}")
+    print(f"  Number of environments: {args.num_envs}")
+    print(f"  Observation space: {env.single_observation_space}")
+    print(f"  Action space: {env.single_action_space}")
+    print(f"  Device: {env.device}")
+    print(f"  Headless mode: {args.headless}")
+    print(f"{'='*80}\n")
+
+    # ---------------------------------------------------
+    # 6. Reset environment
+    # ---------------------------------------------------
+    obs, _ = env.reset()
+    print(f"[Navisim] Environment reset complete")
+    print(f"  Observation shape: {obs['policy'].shape}")
+
+    # ---------------------------------------------------
+    # 7. Main simulation loop
+    # ---------------------------------------------------
     t = 0
+    episode_rewards = torch.zeros(args.num_envs, device=env.device)
 
-    print(f"[Navisim] Starting simulation. Headless: {args.headless}")
+    print(f"\n[Navisim] Starting simulation loop...")
+    print(f"  Max steps: {args.max_steps}")
+    print(f"  Control pattern: Forward (100 steps) → Turn (20 steps)\n")
 
-    # ---------------------------------------------------
-    # 5. Main simulation loop
-    # ---------------------------------------------------
-    while simulation_app.is_running():
+    while simulation_app.is_running() and t < args.max_steps:
 
-        # Example: forward 100 steps, turn 20 steps
+        # Sample actions: forward for 100 steps, turn for 20 steps
         if t % 120 < 100:
-            actions = task.sample_forward_action()
+            actions = env.sample_forward_action()
         else:
-            actions = task.sample_turn_action()
+            actions = env.sample_turn_action()
 
-        obs, rew, done, _ = task.step(actions)
+        # Step environment
+        obs, rewards, terminated, truncated, info = env.step(actions)
 
-        if done.any():
-            task.reset()
+        # Accumulate rewards
+        episode_rewards += rewards
+
+        # Check for episode completion
+        dones = terminated | truncated
+        if dones.any():
+            done_indices = torch.where(dones)[0]
+            for idx in done_indices:
+                print(f"[Step {t:4d}] Environment {idx} completed | "
+                      f"Episode reward: {episode_rewards[idx].item():.3f}")
+            episode_rewards[dones] = 0.0
+
+        # Progress logging
+        if t % 100 == 0 and t > 0:
+            print(f"[Step {t:4d}] Mean reward (last step): {rewards.mean().item():+.4f} | "
+                  f"Cumulative reward: {episode_rewards.mean().item():.3f}")
 
         t += 1
 
     # ---------------------------------------------------
-    # 6. Cleanly close Isaac Sim
+    # 8. Cleanup
     # ---------------------------------------------------
+    print(f"\n[Navisim] Simulation completed after {t} steps")
+    print(f"  Final mean cumulative reward: {episode_rewards.mean().item():.3f}")
+
+    env.close()
     simulation_app.close()
 
 
