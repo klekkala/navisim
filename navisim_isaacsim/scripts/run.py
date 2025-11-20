@@ -3,7 +3,6 @@
 """Run Navisim navigation environment with Isaac Lab."""
 
 import argparse
-import torch
 from isaaclab.app import AppLauncher
 
 # ---------------------------------------------------
@@ -38,7 +37,12 @@ def main():
     # ---------------------------------------------------
     env_cfg = NavisimNavigationEnvCfg()
     env_cfg.scene.num_envs = args.num_envs
-    env_cfg.sim.device = args.device if hasattr(args, 'device') else "cuda:0"
+
+    # Override device if specified via command line
+    if hasattr(args, 'device') and args.device:
+        env_cfg.sim.device = args.device
+
+    print(f"[Navisim] Using device: {env_cfg.sim.device}")
 
     # ---------------------------------------------------
     # 5. Create environment
@@ -68,6 +72,8 @@ def main():
     # ---------------------------------------------------
     # 7. Main simulation loop
     # ---------------------------------------------------
+    import torch  # Import here after Isaac Sim is initialized
+
     t = 0
     episode_rewards = torch.zeros(args.num_envs, device=env.device)
 

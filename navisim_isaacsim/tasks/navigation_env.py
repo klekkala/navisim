@@ -35,21 +35,8 @@ class NavisimNavigationEnv(DirectRLEnv):
         # Task-specific state tensors (on GPU)
         self.prev_x = torch.zeros(self.num_envs, device=self.device, dtype=torch.float32)
 
-        # Action space: 2D continuous (left and right wheel velocities)
-        self._action_space = gym.spaces.Box(
-            low=-1.0,
-            high=1.0,
-            shape=(2,),
-            dtype=torch.float32
-        )
-
-        # Observation space: 13D root state (pos, quat, lin_vel, ang_vel)
-        self._observation_space = gym.spaces.Box(
-            low=-torch.inf,
-            high=torch.inf,
-            shape=(13,),
-            dtype=torch.float32
-        )
+        # Note: Action and observation spaces are automatically created by DirectRLEnv
+        # from cfg.action_space and cfg.observation_space dimensions
 
     def _setup_scene(self):
         """Setup the scene with Jetbot robot and warehouse."""
@@ -144,22 +131,26 @@ class NavisimNavigationEnv(DirectRLEnv):
         if env_ids is None:
             env_ids = torch.arange(self.num_envs, device=self.device)
 
+        # Number of environments to reset
+        num_resets = len(env_ids)
+
         # Reset Jetbot to default state
         root_state = self.scene["jetbot"].data.default_root_state[env_ids].clone()
 
         # Add environment origins (for parallel envs)
         root_state[:, :3] += self.scene.env_origins[env_ids]
 
-        # Write to simulation
+        # Write root state to simulation
         self.scene["jetbot"].write_root_pose_to_sim(root_state[:, :7], env_ids)
         self.scene["jetbot"].write_root_velocity_to_sim(root_state[:, 7:], env_ids)
 
-        # Reset joint states
-        self.scene["jetbot"].write_joint_state_to_sim(
-            self.scene["jetbot"].data.default_joint_pos[env_ids],
-            self.scene["jetbot"].data.default_joint_vel[env_ids],
-            env_ids,
-        )
+        # Reset joint states by directly assigning to the data buffers
+        # This avoids the shape mismatch issue with write_joint_state_to_sim
+        self.scene["jetbot"].data.joint_pos[env_ids] = self.scene["jetbot"].data.default_joint_pos[env_ids]
+        self.scene["jetbot"].data.joint_vel[env_ids] = self.scene["jetbot"].data.default_joint_vel[env_ids]
+
+        # Write the updated joint states to simulation
+        self.scene["jetbot"].write_data_to_sim()
 
         # Reset task-specific state
         self.prev_x[env_ids] = root_state[:, 0]
