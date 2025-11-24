@@ -15,7 +15,7 @@ class NavisimNavigationEnvCfg(DirectRLEnvCfg):
     # Simulation settings
     sim: sim_utils.SimulationCfg = sim_utils.SimulationCfg(
         dt=1.0 / 60.0,  # 60 Hz simulation
-        render_interval=2,  # Render every 2 steps
+        render_interval=1,  # Render every step (required for camera capture)
         device="cuda:0",  # Isaac Sim requires CUDA
     )
 
@@ -38,7 +38,7 @@ class NavisimNavigationEnvCfg(DirectRLEnvCfg):
     state_space: int = 0
 
     # Task-specific settings
-    action_scale: float = 10.0  # Scale for wheel velocities (rad/s)
+    action_scale: float = 50.0  # Scale for wheel velocities (rad/s) - higher for scaled robot
 
     # Reward weights
     forward_reward_weight: float = 1.0

@@ -174,7 +174,8 @@ class NavisimNavigationEnv(DirectRLEnv):
         Returns:
             Action tensor for forward motion. Shape: (num_envs, 2)
         """
-        return torch.ones(self.num_envs, 2, device=self.device) * 0.8
+        # Full speed forward (both wheels at maximum)
+        return torch.ones(self.num_envs, 2, device=self.device) * 1.0
 
     def sample_turn_action(self) -> torch.Tensor:
         """Sample action for turning (differential steering).
@@ -183,6 +184,7 @@ class NavisimNavigationEnv(DirectRLEnv):
             Action tensor for turning. Shape: (num_envs, 2)
         """
         actions = torch.zeros(self.num_envs, 2, device=self.device)
-        actions[:, 0] = 0.5   # Left wheel forward
-        actions[:, 1] = -0.5  # Right wheel backward
+        # Sharp turn: one wheel full forward, other full backward
+        actions[:, 0] = 1.0    # Left wheel full forward
+        actions[:, 1] = -1.0   # Right wheel full backward
         return actions
