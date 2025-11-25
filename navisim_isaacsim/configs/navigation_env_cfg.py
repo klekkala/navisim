@@ -38,7 +38,7 @@ class NavisimNavigationEnvCfg(DirectRLEnvCfg):
     state_space: int = 0
 
     # Task-specific settings
-    action_scale: float = 50.0  # Scale for wheel velocities (rad/s) - higher for scaled robot
+    action_scale: float = 5.0  # Scale for wheel velocities (rad/s) - matches ~4 rad/s max from DifferentialController
 
     # Reward weights
     forward_reward_weight: float = 1.0

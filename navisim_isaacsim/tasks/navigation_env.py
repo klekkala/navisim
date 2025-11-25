@@ -174,8 +174,10 @@ class NavisimNavigationEnv(DirectRLEnv):
         Returns:
             Action tensor for forward motion. Shape: (num_envs, 2)
         """
-        # Full speed forward (both wheels at maximum)
-        return torch.ones(self.num_envs, 2, device=self.device) * 1.0
+        # Forward at 0.8 to match isaac_sim_test.py
+        # With action_scale=5.0, this gives 4.0 rad/s per wheel
+        # (DifferentialController with [0.8, 0.0] produces ~3.8 rad/s)
+        return torch.ones(self.num_envs, 2, device=self.device) * 0.8
 
     def sample_turn_action(self) -> torch.Tensor:
         """Sample action for turning (differential steering).
@@ -184,7 +186,9 @@ class NavisimNavigationEnv(DirectRLEnv):
             Action tensor for turning. Shape: (num_envs, 2)
         """
         actions = torch.zeros(self.num_envs, 2, device=self.device)
-        # Sharp turn: one wheel full forward, other full backward
-        actions[:, 0] = 1.0    # Left wheel full forward
-        actions[:, 1] = -1.0   # Right wheel full backward
+        # Turn action to match isaac_sim_test.py differential steering
+        # DifferentialController with [0.0, 1.0] produces [-1.875, 1.875] rad/s
+        # With action_scale=5.0, we use 0.4 to get 2.0 rad/s differential
+        actions[:, 0] = -0.4   # Left wheel backward
+        actions[:, 1] = 0.4    # Right wheel forward
         return actions

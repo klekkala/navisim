@@ -236,8 +236,10 @@ def main():
     t = 0
     episode_rewards = torch.zeros(args.num_envs, device=env.device)
 
-    print(f"\n[Navisim] Starting simulation loop...")
-    print(f"  Capturing Jetbot's first-person view\n")
+    print(f"\n[Navisim] Starting simulation loop...", flush=True)
+    print(f"  Max steps: {args.max_steps}", flush=True)
+    print(f"  simulation_app.is_running(): {simulation_app.is_running()}", flush=True)
+    print(f"  Capturing Jetbot's first-person view\n", flush=True)
 
     while simulation_app.is_running() and t < args.max_steps:
 
@@ -247,11 +249,13 @@ def main():
         else:
             actions = env.sample_turn_action()
 
-        # Step environment
+        # Step environment (this will apply actions, step physics, and update everything)
+        # The env.step() method calls _pre_physics_step() which applies actions via set_joint_velocity_target()
         obs, rewards, terminated, truncated, info = env.step(actions)
         episode_rewards += rewards
 
-        # Update camera sensor (call every step to get latest data)
+        # Update camera sensor AFTER env.step() to capture the rendered frame
+        # The camera must update after the simulation has rendered the scene
         if camera_available:
             camera.update(dt=env.sim.cfg.dt)
 
@@ -294,10 +298,14 @@ def main():
                 print(f"[Step {t:4d}] Env {idx} completed | Reward: {episode_rewards[idx].item():.3f}")
             episode_rewards[dones] = 0.0
 
-        # Progress logging
-        if t % 100 == 0 and t > 0:
-            print(f"[Step {t:4d}] Mean reward: {rewards.mean().item():+.4f} | "
-                  f"Cumulative: {episode_rewards.mean().item():.3f}")
+        # Progress logging with position and action debug
+        if t % 50 == 0:
+            jetbot_pos = env.scene["jetbot"].data.root_pos_w[0].cpu().numpy()
+            jetbot_vel = env.scene["jetbot"].data.root_lin_vel_w[0].cpu().numpy()
+            action_type = "FORWARD" if t % 120 < 100 else "TURN"
+            print(f"[Step {t:4d}] {action_type} | Pos: [{jetbot_pos[0]:.2f}, {jetbot_pos[1]:.2f}, {jetbot_pos[2]:.2f}] | "
+                  f"Vel: [{jetbot_vel[0]:.2f}, {jetbot_vel[1]:.2f}, {jetbot_vel[2]:.2f}] | "
+                  f"Reward: {rewards.mean().item():+.4f}", flush=True)
 
         t += 1
 
