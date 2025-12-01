@@ -2,12 +2,19 @@
 
 """Run Navisim navigation with Jetbot first-person camera capture using Isaac Lab Camera sensor.
 
-This script:
-- Runs the navigation task with the Jetbot embodiment
-- Captures images from the Jetbot's onboard camera using Isaac Lab Camera API
-- Shows Isaac Sim GUI by default (use --headless to disable)
-- Saves camera images to outputs/jetbot_pov/ at specified intervals for debugging
-- Updates camera every simulation step to capture latest images
+This script demonstrates proper camera tracking in Isaac Lab by:
+- Referencing the existing camera in Jetbot USD (spawn=None)
+- Enabling update_latest_camera_pose=True for automatic transform tracking via XFormPrimView
+- Capturing RGB images from the Jetbot's perspective as it moves through the warehouse
+- Saving images at specified intervals for debugging/training data collection
+
+Key Isaac Lab pattern:
+    Camera is configured in scene config with:
+    - spawn=None (reference existing camera prim, don't create new one)
+    - update_latest_camera_pose=True (track transforms automatically)
+
+    This allows Isaac Lab's XFormPrimView to track the camera's world position
+    as the Jetbot moves, ensuring images update correctly.
 
 Usage:
     # With GUI (default)
@@ -60,6 +67,7 @@ from configs.navigation_env_cfg import NavisimNavigationEnvCfg
 from tasks.navigation_env import NavisimNavigationEnv
 
 # Isaac Lab camera sensor
+# Camera imports - we'll use Isaac Lab's Camera but manually update position
 from isaaclab.sensors.camera import Camera, CameraCfg
 
 
@@ -141,56 +149,22 @@ def main():
     print(f"[Rendering] Using Isaac Lab SimulationContext")
 
     # ---------------------------------------------------
-    # 7. Setup camera capture using Isaac Lab Camera sensor (BEFORE reset)
-    # ---------------------------------------------------
-    # IMPORTANT: Camera must be created BEFORE env.reset() so it gets initialized
-    # Correct camera path discovered from scene inspection
-    camera_prim_path = "/World/envs/env_0/Jetbot/chassis/rgb_camera/jetbot_camera"
-    camera = None
-    camera_available = False
-
-    try:
-        print(f"[Camera] Setting up Isaac Lab Camera sensor...")
-        print(f"[Camera]   - Camera path: {camera_prim_path}")
-
-        # Create camera configuration for the existing camera prim
-        camera_cfg = CameraCfg(
-            prim_path=camera_prim_path,
-            update_period=0,  # Update every step
-            height=480,
-            width=640,
-            data_types=["rgb"],  # We want RGB images
-            spawn=None,  # Don't spawn - use existing camera prim
-        )
-
-        # Create camera sensor
-        camera = Camera(camera_cfg)
-
-        # IMPORTANT: Stop and play simulation to trigger camera initialization callback
-        # The camera's _initialize_callback is only called on PLAY events
-        # Since the sim was already playing when we created the camera, we need to trigger a new PLAY event
-        print(f"[Camera] Triggering simulation play to initialize camera...")
-        sim.pause()
-        sim.play()
-
-        print(f"[Camera] ✓ Successfully initialized Isaac Lab Camera")
-        print(f"[Camera]   - Resolution: 640x480")
-        print(f"[Camera]   - Data types: rgb")
-        print(f"[Camera]   - Is initialized: {camera.is_initialized}")
-        camera_available = True
-
-    except Exception as e:
-        import traceback
-        print(f"[Camera] ✗ Failed to initialize camera: {e}")
-        print(f"[Camera] Traceback:")
-        traceback.print_exc()
-        print(f"[Camera] Continuing without camera capture...")
-        camera_available = False
-
-    # ---------------------------------------------------
-    # 8. Reset environment
+    # 7. Reset environment (this initializes the scene including camera)
     # ---------------------------------------------------
     obs, _ = env.reset()
+
+    # ---------------------------------------------------
+    # 8. Access camera sensor from scene (with update_latest_camera_pose=True)
+    # ---------------------------------------------------
+    # The camera is now configured in the scene with update_latest_camera_pose=True
+    # This enables XFormPrimView to track camera transforms as Jetbot moves
+    camera = env.scene["jetbot_camera"]
+    camera_available = True
+
+    print(f"[Camera] ✓ Camera sensor accessed from scene")
+    print(f"[Camera]   Path: {camera.cfg.prim_path}")
+    print(f"[Camera]   Resolution: {camera.image_shape}")
+    print(f"[Camera]   Update pose tracking: {camera.cfg.update_latest_camera_pose}")
     print(f"[Navisim] Environment reset complete")
     print(f"  Observation shape: {obs['policy'].shape}")
 
@@ -254,41 +228,25 @@ def main():
         obs, rewards, terminated, truncated, info = env.step(actions)
         episode_rewards += rewards
 
-        # Update camera sensor AFTER env.step() to capture the rendered frame
-        # The camera must update after the simulation has rendered the scene
-        if camera_available:
-            camera.update(dt=env.sim.cfg.dt)
+        # Capture and save camera images at specified intervals
+        if camera_available and t % args.save_interval == 0:
+            # Update camera data (this calls update() internally which refreshes transforms via XFormPrimView)
+            camera_data = camera.data
 
-        # Capture camera image at intervals for debugging
-        if camera_available and t % args.save_interval == 0 and t > 0:
-            try:
-                # Get RGB data from Isaac Lab Camera
-                # camera.data.output is a dict: {"rgb": tensor of shape (1, H, W, 3)}
-                if "rgb" in camera.data.output:
-                    rgb_tensor = camera.data.output["rgb"]  # Shape: (1, H, W, 3)
+            # Get RGB image from first environment
+            # camera.data.output["rgb"] shape: (num_envs, height, width, channels)
+            rgb_tensor = camera_data.output["rgb"][0]  # Get first env's image
 
-                    # Convert tensor to numpy array
-                    rgb_array = rgb_tensor[0].cpu().numpy()  # Shape: (H, W, 3)
+            # Convert to numpy and save
+            rgb_array = rgb_tensor.cpu().numpy()
 
-                    # Check if image has valid data
-                    if rgb_array.size > 0 and rgb_array.max() > 0:
-                        filepath = save_camera_image(
-                            rgb_array,
-                            output_dir=args.output_dir,
-                            prefix=f"jetbot_pov_step{t:04d}"
-                        )
-                        print(f"[Step {t:4d}] ✓ Jetbot POV saved to: {filepath}")
-                        print(f"           Image shape: {rgb_array.shape}, dtype: {rgb_array.dtype}, range: [{rgb_array.min():.2f}, {rgb_array.max():.2f}]")
-                    else:
-                        print(f"[Step {t:4d}] ✗ Warning: Camera image is empty or black")
-                        print(f"           Image shape: {rgb_array.shape}, dtype: {rgb_array.dtype}, range: [{rgb_array.min():.2f}, {rgb_array.max():.2f}]")
-                else:
-                    print(f"[Step {t:4d}] ✗ Warning: No RGB data in camera output")
-                    print(f"           Available keys: {list(camera.data.output.keys())}")
-            except Exception as e:
-                import traceback
-                print(f"[Step {t:4d}] ✗ Camera capture error: {e}")
-                traceback.print_exc()
+            # Get camera position for logging
+            cam_pos = camera_data.pos_w[0].cpu().numpy()
+
+            # Save image
+            filepath = save_camera_image(rgb_array, args.output_dir, prefix="jetbot_pov")
+            print(f"[Step {t:4d}] 📸 Saved camera image: {filepath}")
+            print(f"           Camera position: [{cam_pos[0]:.2f}, {cam_pos[1]:.2f}, {cam_pos[2]:.2f}]")
 
         # Episode completion
         dones = terminated | truncated
@@ -303,7 +261,8 @@ def main():
             jetbot_pos = env.scene["jetbot"].data.root_pos_w[0].cpu().numpy()
             jetbot_vel = env.scene["jetbot"].data.root_lin_vel_w[0].cpu().numpy()
             action_type = "FORWARD" if t % 120 < 100 else "TURN"
-            print(f"[Step {t:4d}] {action_type} | Pos: [{jetbot_pos[0]:.2f}, {jetbot_pos[1]:.2f}, {jetbot_pos[2]:.2f}] | "
+
+            print(f"[Step {t:4d}] {action_type} | Jetbot Pos: [{jetbot_pos[0]:.2f}, {jetbot_pos[1]:.2f}, {jetbot_pos[2]:.2f}] | "
                   f"Vel: [{jetbot_vel[0]:.2f}, {jetbot_vel[1]:.2f}, {jetbot_vel[2]:.2f}] | "
                   f"Reward: {rewards.mean().item():+.4f}", flush=True)
 
@@ -313,7 +272,8 @@ def main():
     print(f"\n[Navisim] Simulation completed after {t} steps")
     print(f"  Final mean cumulative reward: {episode_rewards.mean().item():.3f}")
     if camera_available:
-        print(f"  Jetbot POV images saved to: {args.output_dir}")
+        num_images_saved = (t // args.save_interval) + 1
+        print(f"  Jetbot POV images saved: {num_images_saved} images in {args.output_dir}")
 
     env.close()
     simulation_app.close()

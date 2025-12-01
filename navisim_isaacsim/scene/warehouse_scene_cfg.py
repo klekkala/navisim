@@ -7,13 +7,16 @@ import isaaclab.sim as sim_utils
 from assets.jetbot_cfg import JETBOT_CONFIG
 from configs.paths import WAREHOUSE_USD
 
+# Import Camera configuration
+from isaaclab.sensors.camera import CameraCfg
+
 @configclass
 class NavisimWarehouseSceneCfg(InteractiveSceneCfg):
     """Scene configuration with Jetbot robot and warehouse environment.
 
-    Note: Jetbot USD already includes a camera at chassis/front_cam.
-    You can access it via USD prims if needed, but we don't declare it
-    in the scene config since it's already part of the Jetbot asset.
+    The Jetbot USD includes a built-in camera at chassis/rgb_camera/jetbot_camera.
+    We reference it directly using spawn=None and update_latest_camera_pose=True
+    to ensure the camera properly tracks the Jetbot's movement.
     """
 
     # Warehouse environment (spawned once globally at /World/Warehouse)
@@ -29,4 +32,17 @@ class NavisimWarehouseSceneCfg(InteractiveSceneCfg):
     # Jetbot robot (spawned per environment using ENV_REGEX_NS)
     jetbot = JETBOT_CONFIG.replace(
         prim_path="{ENV_REGEX_NS}/Jetbot",
+    )
+
+    # Jetbot onboard camera (reference existing camera prim in Jetbot USD)
+    # The Jetbot USD file includes a camera at chassis/rgb_camera/jetbot_camera
+    # We use spawn=None to reference it (not spawn it) and update_latest_camera_pose=True
+    # to ensure XFormPrimView tracks the camera's position as Jetbot moves
+    jetbot_camera = CameraCfg(
+        prim_path="{ENV_REGEX_NS}/Jetbot/chassis/rgb_camera/jetbot_camera",
+        spawn=None,  # Don't spawn - reference existing camera in USD
+        update_latest_camera_pose=True,  # CRITICAL: Track camera transforms with XFormPrimView
+        data_types=["rgb"],
+        width=640,
+        height=480,
     )
