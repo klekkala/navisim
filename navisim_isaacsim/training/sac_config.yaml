@@ -1,0 +1,42 @@
+params:
+
+  algo: sac
+
+  config:
+    env_name: navisim_sac
+    device: cuda
+    gamma: 0.99
+    tau: 0.005
+    batch_size: 256
+    buffer_size: 200000
+    reward_scale: 1.0
+    learning_rate: 0.0003
+
+    save_best_after: 200
+    save_frequency: 2000
+    grad_steps_per_env_step: 1
+
+    maximize: true         # SAC expects maximize reward
+    normalize_input: false
+    normalize_value: false
+    normalize_rewards: false
+
+    actor_update_interval: 2
+    critic_target_weight: 0.005
+
+    kl_threshold: 0.016
+    num_steps_per_episode: 1000
+
+  env:
+    # Passed to NavisimNavigationEnv(cfg=...)
+    scene:
+      num_envs: 1024
+    episode_length_s: 20.0
+    action_scale: 5.0
+
+  network:
+    mlp:
+      input_size: 13           # overwritten by train_sac.py
+      output_size: 2           # overwritten by train_sac.py
+      units: [256, 256]
+      activation: relu

@@ -37,6 +37,16 @@ class NavisimNavigationEnv(DirectRLEnv):
 
         # Note: Action and observation spaces are automatically created by DirectRLEnv
         # from cfg.action_space and cfg.observation_space dimensions
+        self.policy = None  # Placeholder for attached policy
+
+    def set_policy(self, policy):
+        self.policy = policy
+
+    def compute_action(self, obs):
+        if self.policy is None:
+            raise RuntimeError("No policy attached. Use env.set_policy(policy).")
+        return self.policy.act(obs["policy"])
+
 
     def _setup_scene(self):
         """Setup the scene with Jetbot robot and warehouse."""
@@ -63,6 +73,7 @@ class NavisimNavigationEnv(DirectRLEnv):
                     Shape: (num_envs, 2)
         """
         # Scale actions to actual wheel velocity range
+        actions = torch.clamp(actions, -1.0, 1.0)
         scaled_actions = actions * self.cfg.action_scale
 
         # Apply to Jetbot wheels
@@ -81,8 +92,8 @@ class NavisimNavigationEnv(DirectRLEnv):
             Shape: (num_envs, 13)
         """
         # Get Jetbot root state
-        obs = self.scene["jetbot"].data.root_state_w.clone()
-
+        obs = self.scene["jetbot"].data.root_state_w.clone().to(self.device).float()
+    
         # DirectRLEnv expects dict with 'policy' key
         return {"policy": obs}
 
@@ -192,3 +203,11 @@ class NavisimNavigationEnv(DirectRLEnv):
         actions[:, 0] = -0.4   # Left wheel backward
         actions[:, 1] = 0.4    # Right wheel forward
         return actions
+    
+    @property
+    def obs_dim(self):
+        return self.cfg.observation_space.shape[0]
+
+    @property
+    def act_dim(self):
+        return self.cfg.action_space.shape[0]

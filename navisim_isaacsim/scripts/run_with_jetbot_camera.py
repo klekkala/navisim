@@ -25,6 +25,7 @@ Usage:
 """
 
 import argparse
+from email import policy
 from isaaclab.app import AppLauncher
 
 # ---------------------------------------------------
@@ -32,9 +33,9 @@ from isaaclab.app import AppLauncher
 # ---------------------------------------------------
 parser = argparse.ArgumentParser(description="Run Navisim with Jetbot first-person camera.")
 parser.add_argument("--num_envs", type=int, default=1, help="Number of parallel environments")
-parser.add_argument("--max_steps", type=int, default=1000, help="Maximum simulation steps")
-parser.add_argument("--save_interval", type=int, default=100, help="Steps between image saves")
-parser.add_argument("--output_dir", type=str, default="outputs/jetbot_pov", help="Directory for images")
+parser.add_argument("--max_steps", type=int, default=10000, help="Maximum simulation steps")
+parser.add_argument("--save_interval", type=int, default=10, help="Steps between image saves")
+parser.add_argument("--output_dir", type=str, default="../outputs/jetbot_pov", help="Directory for images")
 
 # AppLauncher adds --headless and other Isaac Lab args
 AppLauncher.add_app_launcher_args(parser)
@@ -65,6 +66,7 @@ if project_root not in sys.path:
 
 from configs.navigation_env_cfg import NavisimNavigationEnvCfg
 from tasks.navigation_env import NavisimNavigationEnv
+from policies.sac_policy import SACPolicy
 
 # Isaac Lab camera sensor
 # Camera imports - we'll use Isaac Lab's Camera but manually update position
@@ -129,6 +131,13 @@ def main():
         cfg=env_cfg,
         render_mode=render_mode
     )
+
+    policy = SACPolicy(
+        actor_path="runs/sac_jetbot/nn/agent_latest.pth",
+        obs_dim=env.obs_dim,
+        act_dim=env.act_dim,
+    )
+    env.set_policy(policy)
 
     print(f"\n{'='*80}")
     print(f"[Navisim] Navigation Environment with Jetbot First-Person Camera")
@@ -207,6 +216,7 @@ def main():
     # ---------------------------------------------------
     # 9. Main simulation loop with camera capture
     # ---------------------------------------------------
+    last_obs, _ = env.reset()
     t = 0
     episode_rewards = torch.zeros(args.num_envs, device=env.device)
 
@@ -215,22 +225,23 @@ def main():
     print(f"  simulation_app.is_running(): {simulation_app.is_running()}", flush=True)
     print(f"  Capturing Jetbot's first-person view\n", flush=True)
 
+
     while simulation_app.is_running() and t < args.max_steps:
+        with torch.no_grad():
+            actions_np = policy.act(last_obs["policy"])
+            actions = torch.tensor(actions_np, device=env.device, dtype=torch.float32)
 
-        # Sample actions
-        if t % 120 < 100:
-            actions = env.sample_forward_action()
-        else:
-            actions = env.sample_turn_action()
-
-        # Step environment (this will apply actions, step physics, and update everything)
-        # The env.step() method calls _pre_physics_step() which applies actions via set_joint_velocity_target()
-        obs, rewards, terminated, truncated, info = env.step(actions)
+        next_obs, rewards, terminated, truncated, info = env.step(actions)
         episode_rewards += rewards
+        last_obs = next_obs
 
         # Capture and save camera images at specified intervals
         if camera_available and t % args.save_interval == 0:
-            # Update camera data (this calls update() internally which refreshes transforms via XFormPrimView)
+            # CRITICAL: Must call camera.update() to refresh sensor data and transforms
+            # This triggers _update_buffers_impl() -> _update_poses() -> XFormPrimView.get_world_poses()
+            camera.update(dt=env.step_dt)
+
+            # Get camera data after update
             camera_data = camera.data
 
             # Get RGB image from first environment
@@ -240,7 +251,7 @@ def main():
             # Convert to numpy and save
             rgb_array = rgb_tensor.cpu().numpy()
 
-            # Get camera position for logging
+            # Get camera position for logging (now updated with latest transform)
             cam_pos = camera_data.pos_w[0].cpu().numpy()
 
             # Save image
