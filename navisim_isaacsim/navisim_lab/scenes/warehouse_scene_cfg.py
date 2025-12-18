@@ -6,9 +6,7 @@ import isaaclab.sim as sim_utils
 
 from navisim_lab.robots.jetbot_cfg import JETBOT_CONFIG
 from navisim_lab.utils.paths import WAREHOUSE_USD
-
-# Import Camera configuration
-from isaaclab.sensors.camera import CameraCfg
+from navisim_lab.camera.jetbot_camera import jetbot_pov_camera
 
 @configclass
 class WarehouseSceneCfg(InteractiveSceneCfg):
@@ -38,11 +36,4 @@ class WarehouseSceneCfg(InteractiveSceneCfg):
     # The Jetbot USD file includes a camera at chassis/rgb_camera/jetbot_camera
     # We use spawn=None to reference it (not spawn it) and update_latest_camera_pose=True
     # to ensure XFormPrimView tracks the camera's position as Jetbot moves
-    jetbot_camera = CameraCfg(
-        prim_path="{ENV_REGEX_NS}/Jetbot/chassis/rgb_camera/jetbot_camera",
-        spawn=None,  # Don't spawn - reference existing camera in USD
-        update_latest_camera_pose=True,  # CRITICAL: Track camera transforms with XFormPrimView
-        data_types=["rgb"],
-        width=640,
-        height=480,
-    )
+    jetbot_camera = jetbot_pov_camera
