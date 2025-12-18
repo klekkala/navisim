@@ -6,10 +6,10 @@ import torch
 import gymnasium as gym
 from isaaclab.envs import DirectRLEnv
 from isaaclab.scene import InteractiveScene
-from configs.navigation_env_cfg import NavisimNavigationEnvCfg
+from navisim_lab.envs.warehouse.warehouse_env_cfg import WarehouseEnvCfg
 
 
-class NavisimNavigationEnv(DirectRLEnv):
+class WarehouseEnv(DirectRLEnv):
     """
     IsaacLab RL environment for Jetbot navigation in warehouse.
 
@@ -20,9 +20,9 @@ class NavisimNavigationEnv(DirectRLEnv):
     **Rewards**: Forward progress along x-axis
     """
 
-    cfg: NavisimNavigationEnvCfg
+    cfg: WarehouseEnvCfg
 
-    def __init__(self, cfg: NavisimNavigationEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: WarehouseEnvCfg, render_mode: str | None = None, **kwargs):
         """Initialize the navigation environment.
 
         Args:

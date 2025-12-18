@@ -34,7 +34,7 @@ parser = argparse.ArgumentParser(description="Run Navisim with Jetbot first-pers
 parser.add_argument("--num_envs", type=int, default=1, help="Number of parallel environments")
 parser.add_argument("--max_steps", type=int, default=1000, help="Maximum simulation steps")
 parser.add_argument("--save_interval", type=int, default=100, help="Steps between image saves")
-parser.add_argument("--output_dir", type=str, default="outputs/jetbot_pov", help="Directory for images")
+parser.add_argument("--output_dir", type=str, default="../outputs/jetbot_pov", help="Directory for images")
 
 # AppLauncher adds --headless and other Isaac Lab args
 AppLauncher.add_app_launcher_args(parser)
@@ -63,8 +63,8 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from configs.navigation_env_cfg import NavisimNavigationEnvCfg
-from tasks.navigation_env import NavisimNavigationEnv
+from navisim_lab.envs.warehouse.warehouse_env_cfg import WarehouseEnvCfg
+from navisim_lab.envs.warehouse.warehouse_env import WarehouseEnv
 
 # Isaac Lab camera sensor
 # Camera imports - we'll use Isaac Lab's Camera but manually update position
@@ -108,7 +108,7 @@ def main():
     # ---------------------------------------------------
     # 4. Create standard environment (no camera sensor)
     # ---------------------------------------------------
-    env_cfg = NavisimNavigationEnvCfg()
+    env_cfg = WarehouseEnvCfg()
     env_cfg.scene.num_envs = args.num_envs
 
     if hasattr(args, 'device') and args.device:
@@ -125,7 +125,7 @@ def main():
     else:
         render_mode = "human"  # GUI mode
 
-    env = NavisimNavigationEnv(
+    env = WarehouseEnv(
         cfg=env_cfg,
         render_mode=render_mode
     )

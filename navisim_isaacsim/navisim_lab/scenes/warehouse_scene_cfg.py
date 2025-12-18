@@ -4,14 +4,14 @@ from isaaclab.utils import configclass
 from isaaclab.assets import AssetBaseCfg
 import isaaclab.sim as sim_utils
 
-from assets.jetbot_cfg import JETBOT_CONFIG
-from configs.paths import WAREHOUSE_USD
+from navisim_lab.robots.jetbot_cfg import JETBOT_CONFIG
+from navisim_lab.utils.paths import WAREHOUSE_USD
 
 # Import Camera configuration
 from isaaclab.sensors.camera import CameraCfg
 
 @configclass
-class NavisimWarehouseSceneCfg(InteractiveSceneCfg):
+class WarehouseSceneCfg(InteractiveSceneCfg):
     """Scene configuration with Jetbot robot and warehouse environment.
 
     The Jetbot USD includes a built-in camera at chassis/rgb_camera/jetbot_camera.

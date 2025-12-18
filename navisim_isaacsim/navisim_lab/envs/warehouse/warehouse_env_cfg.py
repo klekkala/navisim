@@ -4,12 +4,12 @@
 
 from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.utils import configclass
-from scene.warehouse_scene_cfg import NavisimWarehouseSceneCfg
+from navisim_lab.scenes.warehouse_scene_cfg import WarehouseSceneCfg
 import isaaclab.sim as sim_utils
 
 
 @configclass
-class NavisimNavigationEnvCfg(DirectRLEnvCfg):
+class WarehouseEnvCfg(DirectRLEnvCfg):
     """Configuration for Navisim navigation environment with Jetbot."""
 
     # Simulation settings
@@ -20,7 +20,7 @@ class NavisimNavigationEnvCfg(DirectRLEnvCfg):
     )
 
     # Scene configuration
-    scene: NavisimWarehouseSceneCfg = NavisimWarehouseSceneCfg(
+    scene: WarehouseSceneCfg = WarehouseSceneCfg(
         num_envs=1,
         env_spacing=4.0,
     )
