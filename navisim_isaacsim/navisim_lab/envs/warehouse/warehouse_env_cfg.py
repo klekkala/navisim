@@ -4,7 +4,7 @@
 
 from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.utils import configclass
-from navisim_lab.scenes.warehouse_scene_cfg import WarehouseSceneCfg
+from navisim_lab.envs.warehouse.warehouse_scene_cfg import WarehouseSceneCfg
 import isaaclab.sim as sim_utils
 
 
