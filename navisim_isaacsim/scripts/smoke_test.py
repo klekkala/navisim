@@ -52,7 +52,7 @@ for _ in range(10):
     a = env.action_space.sample()
     a = torch.tensor(a, device=device, dtype=torch.float32)
     obs, rew, term, trunc, info = env.step(a)
-    logging.info(f"Step reward: {obs}, {rew}, {term}")
+    logger.info(f"Step reward: {obs}, {rew}, {term}")
 
 env.close()
 simulation_app.close()
