@@ -1,0 +1,37 @@
+# ppo_warehouse_jetbot.yaml
+seed: 42
+device: "cuda:0"
+num_steps_per_env: 32
+max_iterations: 2000
+save_interval: 50
+experiment_name: "warehouse_jetbot"
+run_name: "ppo"
+
+# map env observation groups -> rsl_rl observation sets
+obs_groups:
+  policy: ["policy"]
+  critic: ["policy"]   # if you later add privileged obs, map them here
+
+policy:
+  class_name: "ActorCritic"
+  init_noise_std: 1.0
+  actor_obs_normalization: true
+  critic_obs_normalization: true
+  actor_hidden_dims: [256, 256]
+  critic_hidden_dims: [256, 256]
+  activation: "elu"
+
+algorithm:
+  class_name: "PPO"
+  num_learning_epochs: 5
+  num_mini_batches: 4
+  learning_rate: 0.0003
+  schedule: "adaptive"
+  gamma: 0.99
+  lam: 0.95
+  entropy_coef: 0.01
+  desired_kl: 0.01
+  max_grad_norm: 1.0
+  value_loss_coef: 1.0
+  use_clipped_value_loss: true
+  clip_param: 0.2
