@@ -5,12 +5,14 @@ navigate through large environments using NetworkX graph-based spatial organizat
 """
 
 from .scene_graph import SceneGraph, SceneSection
+from .sequence_graph import SequenceGraph
 from .dynamic_scene_manager import DynamicSceneManager
 from .dynamic_scene_env_wrapper import DynamicSceneEnvWrapper
 
 __all__ = [
     "SceneGraph",
     "SceneSection",
+    "SequenceGraph",
     "DynamicSceneManager",
     "DynamicSceneEnvWrapper",
 ]

@@ -2,6 +2,7 @@
 
 This manager handles loading/unloading USD sections as the robot navigates,
 working with Isaac Sim's USD stage to efficiently stream large environments.
+Integrates with RocksDB for asset metadata storage.
 """
 
 import logging
@@ -10,6 +11,7 @@ from typing import Dict, List, Optional, Set
 import numpy as np
 
 from .scene_graph import SceneGraph, SceneSection
+from ..data import get_db, reset_db
 
 logger = logging.getLogger(__name__)
 
