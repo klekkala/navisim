@@ -103,12 +103,13 @@ make rebuild   # Clean + rebuild C++ bindings
 **Overview**: Integration layer built on [NVIDIA Isaac Lab](https://isaac-sim.github.io/IsaacLab) for physics-based RL navigation with photorealistic rendering from NaviSim.
 
 **Current Implementation**:
-- `tasks/navigation_task.py`: NavigationTask using IsaacLab's InteractiveScene for Jetbot navigation
-- `scene/warehouse_scene_cfg.py`: NavisimWarehouseSceneCfg defining scene layout (warehouse, lighting, robot)
-- `assets/jetbot_cfg.py`: ArticulationCfg for Jetbot robot with ImplicitActuatorCfg for wheel control
-- `configs/paths.py`: Isaac Nucleus asset paths (warehouse USD, Jetbot USD)
-- `envs/environment.py`: Gymnasium wrapper around NavigationTask
-- `scripts/run.py`: AppLauncher-based script to run navigation task
+- `navisim_lab/envs/warehouse/warehouse_env.py`: WarehouseEnv inheriting from DirectRLEnv for Jetbot navigation
+- `navisim_lab/envs/warehouse/warehouse_env_cfg.py`: WarehouseEnvCfg with environment configuration (13D observations, 2D actions)
+- `navisim_lab/envs/warehouse/warehouse_scene_cfg.py`: WarehouseSceneCfg defining scene layout (warehouse, lighting, robot)
+- `navisim_lab/robots/jetbot_cfg.py`: ArticulationCfg for Jetbot robot with ImplicitActuatorCfg for wheel control
+- `navisim_lab/camera/jetbot_camera.py`: POV camera implementation for Jetbot
+- `navisim_lab/utils/paths.py`: Isaac Nucleus asset paths (warehouse USD, Jetbot USD)
+- Scripts (if present in parent `scripts/` directory): AppLauncher-based scripts to run tasks
 
 **IsaacLab Architecture Patterns**:
 
@@ -117,16 +118,20 @@ make rebuild   # Clean + rebuild C++ bindings
 - Spawned via `sim_utils.UsdFileCfg` for USD assets or procedural spawn configs
 - Articulations use `ArticulationCfg` with actuator definitions via regex joint patterns
 
-*Task Implementation*: Custom task class with manual SimulationContext management
-- `NavigationTask.__init__()`: Creates SimulationContext, InteractiveScene, initializes state tensors
-- `reset()`: Resets robot to default root/joint states relative to env_origins
-- `step(actions)`: Applies joint velocity targets, steps physics, updates scene, computes rewards
-- Uses PyTorch tensors for all state/action/reward data
+*DirectRLEnv Implementation*: Inherits from `DirectRLEnv` for optimized RL workflow
+- `_setup_scene()`: Creates InteractiveScene, clones environments, resets simulation
+- `_pre_physics_step(actions)`: Scales and applies actions to actuators before physics step
+- `_apply_action()`: Writes data to simulation (calls `scene.write_data_to_sim()`)
+- `_get_observations()`: Returns dict with 'policy' key containing observation tensor (13D: position, quaternion, velocities)
+- `_get_rewards()`: Computes reward tensor based on forward progress
+- Uses PyTorch tensors for all state/action/reward data on GPU
 
 *Running Tasks*:
 ```bash
 cd navisim_isaacsim
-python scripts/run.py --num_envs 1
+# Example command (adjust based on actual scripts present)
+python scripts/run_with_jetbot_camera.py --num_envs 1
+python scripts/smoke_test.py
 ```
 AppLauncher handles Isaac Sim initialization and provides simulation_app instance
 
@@ -138,7 +143,7 @@ AppLauncher handles Isaac Sim initialization and provides simulation_app instanc
   - Environment inherits from `ManagerBasedRLEnv`
 - **Direct Workflow**: All logic in single task class, more transparent, better for optimization
   - Inherits from `DirectRLEnv`, implements `_get_observations()`, `_get_rewards()`, `_apply_action()`, etc.
-  - Current implementation uses custom pattern similar to direct workflow
+  - **Current implementation uses Direct Workflow** (WarehouseEnv inherits from DirectRLEnv)
 
 *InteractiveScene*: Central scene management system
 - Handles multi-environment cloning and spacing via `env_spacing` parameter
@@ -215,28 +220,48 @@ When adding new spatial data types:
 
 ### Working with IsaacLab Tasks
 
-**Running the navigation task**:
+**Running the warehouse navigation task**:
 ```bash
 cd navisim_isaacsim
-python scripts/run.py --num_envs 4 --headless
+# Run available scripts (check ../scripts/ directory for current options)
+python ../scripts/smoke_test.py
+python ../scripts/run_with_jetbot_camera.py --num_envs 1 --headless
+
+# RL training with RSL-RL (if scripts exist)
+python ../scripts/rsl_rl/train.py --num_envs 4
+python ../scripts/rsl_rl/play.py --num_envs 1
 ```
 
+**RL Training Configuration**:
+The project uses RSL-RL for reinforcement learning training:
+- Config: `navisim_lab/configs/rsl_rl/ppo_cfg.py` and `ppo_warehouse_jetbot.yaml`
+- The config uses `RslRlOnPolicyRunnerCfg` with nested `RslRlPpoActorCriticCfg` and `RslRlPpoAlgorithmCfg`
+- YAML-based configuration loaded via `isaaclab.utils.io.load_yaml`
+- Training scripts integrate with Isaac Lab's RL workflow
+
 **Adding new assets to scene**:
-1. Define asset config in `assets/` (e.g., new robot ArticulationCfg)
-2. Add to scene config in `scene/` as class attribute
-3. Access in task via `self.scene["asset_name"]`
+1. Define asset config in `navisim_lab/robots/` (e.g., new robot ArticulationCfg)
+2. Add to scene config in `navisim_lab/envs/warehouse/warehouse_scene_cfg.py` as class attribute
+3. Access in environment via `self.scene["asset_name"]`
 
 **Modifying task behavior**:
-1. Edit `tasks/navigation_task.py`
-2. Modify `_compute_reward()` for custom reward logic
-3. Update `_get_obs()` to change observation structure
-4. Adjust `step()` for different action processing
+1. Edit `navisim_lab/envs/warehouse/warehouse_env.py`
+2. Modify `_get_rewards()` for custom reward logic
+3. Update `_get_observations()` to change observation structure
+4. Adjust `_pre_physics_step()` for different action processing
 
 **Creating new scenes**:
-1. Inherit from `InteractiveSceneCfg` in `scene/`
+1. Inherit from `InteractiveSceneCfg` in `navisim_lab/envs/`
 2. Define assets as class attributes with spawn configs
 3. Use `sim_utils.UsdFileCfg`, `GroundPlaneCfg`, or other spawn utilities
-4. Instantiate in task: `InteractiveScene(scene_cfg)`
+4. Instantiate in environment's `_setup_scene()`: `InteractiveScene(self.cfg.scene)`
+
+**Working with cameras**:
+The project includes a modular camera system for POV rendering:
+- `navisim_lab/camera/jetbot_camera.py`: Jetbot POV camera implementation
+- Camera is attached to robot and can capture frames during simulation
+- Use `camera.capture()` to get RGB frames from the robot's perspective
+- Camera module is separate from the Isaac Lab Camera sensor for flexibility
 
 ### Git Workflow
 
