@@ -32,6 +32,15 @@ assets/
 # any other data files
 *.csv
 
+# any image files
+*.png
+*.jpg
+*.jpeg
+*.bmp
+
+# checkpoints
+*.ckpt
+*.pt
 
 # Build directories
 build/
