@@ -2,8 +2,8 @@
 seed: 42
 device: "cuda:0"
 num_steps_per_env: 32
-max_iterations: 2000
-save_interval: 50
+max_iterations: 10
+save_interval: 2
 experiment_name: "warehouse_jetbot"
 run_name: "ppo"
 
