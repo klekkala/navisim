@@ -21,7 +21,7 @@ def parse_args():
         default=str(Path(__file__).resolve().parents[2] / "navisim_lab" / "configs" / "rsl_rl" / "ppo_warehouse_jetbot.yaml"),
         help="Path to agent config YAML",
     )
-    parser.add_argument("--log_dir", type=str, default="logs/rsl_rl", help="Log directory")
+    parser.add_argument("--log_dir", type=str, default="check_pts/rsl_rl", help="Log directory")
     # AppLauncher adds its own arguments (--headless, --enable_cameras, etc.)
     AppLauncher.add_app_launcher_args(parser)
     return parser.parse_args()

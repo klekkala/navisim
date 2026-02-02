@@ -14,7 +14,7 @@ def parse_args():
     parser.add_argument("--task", type=str, default="Navisim-Warehouse-Jetbot-v0", help="Task name")
     parser.add_argument("--num_envs", type=int, default=1, help="Number of parallel environments")
     parser.add_argument("--checkpoint", type=str, required=False, help="Path to model checkpoint (e.g., model_500.pt)")
-    parser.add_argument("--num_steps", type=int, default=1000, help="Number of steps to run")
+    parser.add_argument("--num_steps", type=int, default=5000, help="Number of steps to run")
     parser.add_argument(
         "--agent_cfg",
         type=str,
@@ -140,3 +140,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+"""
+python scripts/rsl_rl/play.py --checkpoint logs/rsl_rl/warehouse_jetbot/ppo/model_8.pt
+"""
