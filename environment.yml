@@ -1,4 +1,4 @@
-name: navisim
+name: isaaclab
 channels:
   - conda-forge
 dependencies:
@@ -30,6 +30,8 @@ dependencies:
   - wheel=0.46.3
   - zstd=1.5.7
   - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu128
+
       - absl-py==2.4.0
       - aioboto3==15.1.0
       - aiobotocore==2.24.0
@@ -220,3 +222,4 @@ dependencies:
       - wrapt==1.16.0
       - yarl==1.18.3
       - zipp==3.23.0
+prefix: /home/jiwon-hae/miniforge3/envs/isaaclab
