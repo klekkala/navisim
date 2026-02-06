@@ -8,20 +8,47 @@ This package (`navisim_isaacsim`) provides a bridge between NaviSim's photoreali
 
 ## Prerequisites
 
-- **NVIDIA Isaac Sim** (2023.1.0 or later)
-- **Isaac Lab** installed and configured
+- **NVIDIA Isaac Sim** 5.1.0
+- **Isaac Lab** 2.3.2
 - **NaviSim core package** (parent `navisim/` directory)
 - CUDA-capable GPU
-- Python 3.10
+- Python 3.11
 
 ## Installation
 
+### Option 1: Using the shared conda environment (recommended)
+
+If you haven't set up the project yet, create the conda environment from the root of the repository:
+
 ```bash
-# From the navisim_isaacsim directory
+# From the project root (navisim/)
+conda env create -f environment.yml
+conda activate navisim
+```
+
+This installs all dependencies including Isaac Sim 5.1, Isaac Lab 2.3.2, PyTorch (CUDA 12.8), and RSL-RL.
+
+Then install the `navisim_lab` package:
+
+```bash
+cd navisim_isaacsim
+pip install -e .
+
+# Verify installation
+python -c "import navisim_lab; print('Success')"
+```
+
+### Option 2: Existing Isaac Lab environment
+
+If you already have an Isaac Lab conda environment:
+
+```bash
+conda activate isaaclab
+cd navisim_isaacsim
 pip install -e .
 ```
 
-This installs the `navisim_lab` package which contains all Isaac Lab integration components.
+> **Note:** Scripts in `scripts/` automatically add `navisim_isaacsim` to `sys.path`, so you can also run them directly without installing the package.
 
 ---
 
@@ -29,458 +56,303 @@ This installs the `navisim_lab` package which contains all Isaac Lab integration
 
 ```
 navisim_isaacsim/
-├── navisim_lab/                    # Main Python package
+├── navisim_lab/                      # Main Python package
 │   ├── __init__.py
-│   ├── envs/                       # RL Environments
-│   │   └── warehouse/              # Warehouse navigation environment
-│   │       ├── warehouse_env.py           # DirectRLEnv implementation
-│   │       ├── warehouse_env_cfg.py       # Environment configuration (obs/action spaces, rewards)
-│   │       └── warehouse_scene_cfg.py     # Scene layout (assets, lighting, robot spawn)
-│   ├── robots/                     # Robot configurations
-│   │   └── jetbot_cfg.py          # Jetbot ArticulationCfg with wheel actuators
-│   ├── camera/                     # Camera system
-│   │   └── jetbot_camera.py       # POV camera configuration for Jetbot
-│   ├── tasks/                      # Task registry
-│   │   ├── __init__.py            # Imports warehouse tasks for registration
-│   │   └── warehouse/             # Warehouse task definitions
-│   │       ├── __init__.py        # Registers "Navisim-Warehouse-Jetbot-v0"
-│   │       └── agents/            # Agent-specific configurations
-│   ├── configs/                    # Training configurations
-│   │   └── rsl_rl/                # RSL-RL (PPO) configs
-│   │       ├── ppo_cfg.py                # Config loader for RSL-RL
-│   │       └── ppo_warehouse_jetbot.yaml # PPO hyperparameters
-│   └── utils/                      # Utility modules
-│       ├── paths.py               # Isaac Nucleus asset paths (warehouse/jetbot USD)
-│       └── camera_capture.py      # Camera frame extraction utilities
-├── scripts/                        # Execution scripts
-│   ├── smoke_test.py              # Quick integration test
-│   ├── run_with_jetbot_camera.py  # Run environment with camera capture
-│   └── rsl_rl/                    # RL training scripts
-│       ├── train.py               # Train PPO agent
-│       └── play.py                # Evaluate trained agent
-├── outputs/                        # Generated outputs
-│   └── jetbot_pov/                # Captured camera frames
-├── pyproject.toml                  # Package metadata
-└── README.md                       # This file
+│   ├── agents/                       # RL agent implementations
+│   │   ├── base_agent.py            #   Abstract base class for agents
+│   │   └── rsl_rl/                  #   RSL-RL specific agent
+│   │       └── rsl_rl_agent.py
+│   ├── camera/                       # Camera system
+│   │   └── jetbot_camera.py         #   Jetbot POV camera configuration
+│   ├── configs/                      # Training configurations
+│   │   └── rsl_rl/
+│   │       ├── ppo_cfg.py           #   Config loader for RSL-RL
+│   │       └── ppo_warehouse_jetbot.yaml  # PPO hyperparameters
+│   ├── data/                         # Data management
+│   │   └── rocksdb_manager.py       #   RocksDB integration for Gaussian models
+│   ├── envs/                         # RL environments
+│   │   ├── base/
+│   │   │   └── base_nav_env.py      #   BaseNavigationEnv (abstract base class)
+│   │   └── warehouse/
+│   │       ├── warehouse_env.py     #   WarehouseEnv (DirectRLEnv)
+│   │       ├── warehouse_env_cfg.py #   Environment config (obs/action spaces)
+│   │       └── warehouse_scene_cfg.py #  Scene layout (assets, robot, camera)
+│   ├── robots/                       # Robot configurations
+│   │   └── jetbot_cfg.py            #   Jetbot ArticulationCfg
+│   ├── scene/                        # Scene management
+│   │   ├── build_scene_graph.py     #   Scene graph construction
+│   │   ├── dynamic_scene_manager.py #   Runtime scene management
+│   │   ├── scene_graph.py           #   Scene graph data structure
+│   │   └── sequence_graph.py        #   Sequence graph integration
+│   ├── tasks/                        # Gymnasium task registry
+│   │   ├── __init__.py              #   Imports warehouse tasks
+│   │   └── warehouse/
+│   │       └── __init__.py          #   Registers "Navisim-Warehouse-Jetbot-v0"
+│   └── utils/                        # Utilities
+│       ├── camera_utils.py          #   Camera capture and image saving
+│       ├── paths.py                 #   Isaac Nucleus asset paths
+│       └── sequence_graph_tools.py  #   Sequence graph navigation tools
+├── scripts/                          # Executable scripts
+│   ├── smoke_test.py                #   Quick integration test
+│   ├── run_with_jetbot_camera.py    #   Run env with camera capture
+│   └── rsl_rl/                      #   RSL-RL training/evaluation
+│       ├── train.py                 #     Train PPO agent
+│       └── play.py                  #     Evaluate trained agent
+├── tests/                            # Test suite
+├── examples/                         # Example scripts
+├── pyproject.toml                    # Package metadata
+└── README.md                         # This file
 ```
 
 ---
 
-## Component Roles
+## Quick Start
 
-### 1. Environments (`navisim_lab/envs/`)
+All scripts must be run from the `navisim_isaacsim/` directory.
 
-The core RL environment implementations using Isaac Lab's DirectRLEnv pattern.
+### 1. Integration Test
 
-#### **WarehouseEnv** ([warehouse_env.py](navisim_lab/envs/warehouse/warehouse_env.py))
-- **Purpose**: Main RL environment for Jetbot navigation in warehouse
-- **Base Class**: `DirectRLEnv` (Isaac Lab's optimized RL interface)
-- **Key Methods**:
-  - `_setup_scene()`: Creates InteractiveScene, clones environments
-  - `_pre_physics_step(actions)`: Applies wheel velocity commands
-  - `_get_observations()`: Returns 13D state (position, quaternion, velocities)
-  - `_get_rewards()`: Computes forward progress reward
-- **Observations**: `[pos(3), quat(4), lin_vel(3), ang_vel(3)]` = 13D
-- **Actions**: `[left_wheel_vel, right_wheel_vel]` = 2D (normalized [-1, 1])
-
-#### **WarehouseEnvCfg** ([warehouse_env_cfg.py](navisim_lab/envs/warehouse/warehouse_env_cfg.py))
-- **Purpose**: Configuration for environment parameters
-- **Base Class**: `DirectRLEnvCfg`
-- **Key Settings**:
-  - Simulation: 60 Hz physics, CUDA device
-  - Episode length: 10 seconds
-  - Action scaling: 5.0 rad/s for wheel velocities
-  - Reward weights: Forward progress weight = 1.0
-  - Decimation: 2 (sim steps per env step)
-
-#### **WarehouseSceneCfg** ([warehouse_scene_cfg.py](navisim_lab/envs/warehouse/warehouse_scene_cfg.py))
-- **Purpose**: Defines scene layout and asset spawning
-- **Base Class**: `InteractiveSceneCfg`
-- **Assets**:
-  - `warehouse`: Static warehouse USD asset
-  - `jetbot`: Per-environment cloned robot with actuators
-  - `jetbot_camera`: POV camera reference (existing in Jetbot USD)
-- **Pattern**: Declarative asset definitions using class attributes
-
----
-
-### 2. Robots (`navisim_lab/robots/`)
-
-Robot configuration definitions using Isaac Lab's Articulation system.
-
-#### **JETBOT_CONFIG** ([jetbot_cfg.py](navisim_lab/robots/jetbot_cfg.py))
-- **Purpose**: Jetbot robot articulation configuration
-- **Key Features**:
-  - USD file spawning with 7x scale (human-sized for better physics)
-  - Initial spawn height: 0.21m (wheels on ground)
-  - Actuators: `ImplicitActuatorCfg` for wheel velocity control
-    - Joint names: `left_wheel_joint`, `right_wheel_joint`
-    - High damping (1000.0) for scaled robot mass
-    - Velocity limit: 200 rad/s
-    - Effort limit: 5000 N·m (scaled for 7³ mass increase)
-
----
-
-### 3. Camera (`navisim_lab/camera/`)
-
-Camera system for POV rendering and observation capture.
-
-#### **jetbot_pov_camera** ([jetbot_camera.py](navisim_lab/camera/jetbot_camera.py))
-- **Purpose**: First-person camera attached to Jetbot
-- **Type**: `CameraCfg` (Isaac Lab sensor)
-- **Key Features**:
-  - References existing camera in Jetbot USD (spawn=None)
-  - Path: `{ENV_REGEX_NS}/Jetbot/chassis/rgb_camera/jetbot_camera`
-  - Resolution: 640x480 RGB
-  - `update_latest_camera_pose=True`: Tracks robot movement via XFormPrimView
-- **Use Case**: Visual observations, debugging, camera-based RL policies
-
----
-
-### 4. Tasks (`navisim_lab/tasks/`)
-
-Task registry system for Gymnasium environment registration.
-
-#### **Purpose**
-Registers Isaac Lab environments with Gymnasium using the standard `gym.register()` pattern.
-
-#### **Structure**
-```python
-# tasks/__init__.py imports all task subpackages
-from .warehouse import *
-
-# tasks/warehouse/__init__.py registers the environment
-gymnasium.register(
-    id="Navisim-Warehouse-Jetbot-v0",
-    entry_point="navisim_lab.envs.warehouse:WarehouseEnv",
-    env_cfg_entry_point="navisim_lab.envs.warehouse:WarehouseEnvCfg",
-)
+```bash
+python scripts/smoke_test.py --headless
 ```
 
-#### **Usage**
-```python
-import gymnasium as gym
-import navisim_lab.tasks  # Trigger registration
+This launches Isaac Sim, creates the warehouse environment, runs 10 random action steps, and validates the environment lifecycle.
 
+### 2. Train a PPO Agent
+
+```bash
+# Train with 64 parallel environments (headless)
+python scripts/rsl_rl/train.py --num_envs 64 --headless
+
+# Train with fewer envs for debugging
+python scripts/rsl_rl/train.py --num_envs 4 --headless
+```
+
+Checkpoints are saved to `check_pts/rsl_rl/warehouse_jetbot/ppo/` (configurable via `--log_dir`).
+
+Training hyperparameters are in [ppo_warehouse_jetbot.yaml](navisim_lab/configs/rsl_rl/ppo_warehouse_jetbot.yaml).
+
+### 3. Evaluate a Trained Agent
+
+```bash
+# Run with a trained checkpoint
+python scripts/rsl_rl/play.py --checkpoint check_pts/rsl_rl/warehouse_jetbot/ppo/model_10.pt
+
+# Run with zero policy (no checkpoint, for testing)
+python scripts/rsl_rl/play.py
+
+# Save Jetbot POV camera images during playback
+python scripts/rsl_rl/play.py --checkpoint model.pt --save_camera_images --save_every 10 --output_dir outputs/playback_pov
+```
+
+### 4. Run with Camera Capture
+
+```bash
+python scripts/run_with_jetbot_camera.py --num_envs 1
+```
+
+Camera frames are saved to `outputs/jetbot_pov/`.
+
+---
+
+## Architecture
+
+### Environment Hierarchy
+
+```
+DirectRLEnv (Isaac Lab)
+  └── BaseNavigationEnv (base_nav_env.py)
+        └── WarehouseEnv (warehouse_env.py)
+```
+
+**BaseNavigationEnv** provides:
+- Standard scene setup with `InteractiveScene`
+- Camera transform standardization (see [Camera Transform Fix](#camera-transform-fix))
+- Common navigation state: `prev_position`, `goal_positions`, `collision_flags`
+- Utility methods: `_compute_distance_to_goal()`, `_compute_forward_progress()`
+- Timeout-based episode termination
+
+**WarehouseEnv** implements:
+- **Observations**: 13D Jetbot root state `[pos(3), quat(4), lin_vel(3), ang_vel(3)]`
+- **Actions**: 2D normalized wheel velocities `[left_wheel, right_wheel]` in `[-1, 1]`, scaled by `action_scale=5.0` rad/s
+- **Rewards**: Forward progress along x-axis, weighted by `forward_reward_weight`
+- **Reset**: Returns Jetbot to default pose with environment origin offset
+
+### Scene Configuration
+
+[WarehouseSceneCfg](navisim_lab/envs/warehouse/warehouse_scene_cfg.py) defines:
+- **warehouse**: Static warehouse USD environment
+- **jetbot**: NVIDIA Jetbot robot (7x scale for human-sized navigation)
+- **jetbot_camera**: POV camera referencing the existing camera prim in the Jetbot USD
+
+### Robot Configuration
+
+[JETBOT_CONFIG](navisim_lab/robots/jetbot_cfg.py):
+- Spawned from Isaac Nucleus Jetbot USD at 7x scale
+- `ImplicitActuatorCfg` for `left_wheel_joint` and `right_wheel_joint`
+- High damping (1000.0) and effort limit (5000 N·m) to handle scaled mass
+- Spawn height: 0.21m (wheel radius 0.03m × 7)
+
+### Task Registration
+
+The environment is registered with Gymnasium as `Navisim-Warehouse-Jetbot-v0` in [tasks/warehouse/\_\_init\_\_.py](navisim_lab/tasks/warehouse/__init__.py):
+
+```python
+import navisim_lab.tasks  # Triggers registration
 env = gym.make("Navisim-Warehouse-Jetbot-v0", cfg=env_cfg)
 ```
 
----
+### Camera System
 
-### 5. Configs (`navisim_lab/configs/`)
+The Jetbot USD includes a camera at `chassis/rgb_camera/jetbot_camera`. To use it:
 
-Training algorithm configurations for RL workflows.
+1. **Configuration**: [jetbot_camera.py](navisim_lab/camera/jetbot_camera.py) defines a `CameraCfg` with `spawn=None` (references existing prim) and `update_latest_camera_pose=False`.
+2. **Scene**: Added as `jetbot_camera` attribute in `WarehouseSceneCfg`.
+3. **Capture**: Use utilities from [camera_utils.py](navisim_lab/utils/camera_utils.py):
 
-#### **RSL-RL PPO Configuration** ([rsl_rl/](navisim_lab/configs/rsl_rl/))
+```python
+from navisim_lab.utils.camera_utils import get_camera_images, save_camera_batch
 
-**ppo_cfg.py**:
-- Loads YAML configuration into RSL-RL config objects
-- Creates nested structure: `RslRlOnPolicyRunnerCfg` → `RslRlPpoActorCriticCfg` + `RslRlPpoAlgorithmCfg`
-- Exposes `PPO_WAREHOUSE_JETBOT_CFG` instance
+# Get RGB images as tensor (num_envs, H, W, 3)
+rgb = get_camera_images(env.unwrapped, camera_name="jetbot_camera")
 
-**ppo_warehouse_jetbot.yaml**:
-- PPO hyperparameters (learning rate, batch size, GAE lambda, etc.)
-- Actor-critic network architecture (hidden layers, activation functions)
-- Training schedule (max iterations, save interval)
-
----
-
-### 6. Utils (`navisim_lab/utils/`)
-
-Utility modules for paths and camera operations.
-
-#### **paths.py**
-- **Purpose**: Centralized asset path management
-- **Exports**:
-  - `WAREHOUSE_USD`: Path to warehouse environment USD file
-  - `JETBOT_USD`: Path to Jetbot robot USD file
-  - Uses `ISAAC_NUCLEUS_DIR` for Isaac Sim built-in assets
-
-#### **camera_capture.py**
-- **Purpose**: Utilities for extracting and saving camera frames
-- **Use Case**: Recording POV videos, generating datasets from simulation
-
----
-
-### 7. Scripts (`scripts/`)
-
-Executable scripts for running environments and training agents.
-
-#### **smoke_test.py**
-- **Purpose**: Quick integration test for environment setup
-- **What it does**:
-  - Launches Isaac Sim with AppLauncher
-  - Creates `Navisim-Warehouse-Jetbot-v0` environment
-  - Runs 10 random action steps
-  - Validates environment lifecycle (reset, step, close)
-
-#### **run_with_jetbot_camera.py**
-- **Purpose**: Run environment with camera frame capture
-- **Features**:
-  - Records POV images from Jetbot camera
-  - Saves frames to `outputs/jetbot_pov/`
-  - Supports headless mode for server deployments
-  - Configurable number of environments and episode length
-
-#### **rsl_rl/train.py** (if exists)
-- **Purpose**: Train PPO agent using RSL-RL
-- **Features**:
-  - Loads PPO config from YAML
-  - Parallelized training across multiple environments
-  - Saves checkpoints to logs directory
-
-#### **rsl_rl/play.py** (if exists)
-- **Purpose**: Evaluate trained agent
-- **Features**:
-  - Loads trained policy checkpoint
-  - Runs deterministic policy for evaluation
-  - Visualizes agent behavior in Isaac Sim viewer
-
----
-
-## Usage
-
-### Docker Setup (Recommended)
-
-If running Isaac Lab in a Docker container, ensure GPU access is properly configured:
-
-```bash
-# Enable X11 forwarding (for GUI mode)
-xhost +local:docker
-
-# Run Isaac Lab container with GPU support
-docker run -it --rm \
-    --gpus all \
-    --network host \
-    --ipc host \
-    -e ACCEPT_EULA=Y \
-    -e PRIVACY_CONSENT=Y \
-    -e DISPLAY=$DISPLAY \
-    -e XAUTHORITY=$XAUTHORITY \
-    -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-    -v $XAUTHORITY:$XAUTHORITY \
-    -v ~/docker/isaac-sim/cache/kit:/isaac-sim/kit/cache \
-    -v ~/docker/isaac-sim/cache/ov:/root/.cache/ov \
-    -v ~/docker/isaac-sim/cache/pip:/root/.cache/pip \
-    -v ~/docker/isaac-sim/cache/glcache:/root/.cache/nvidia/GLCache \
-    -v ~/docker/isaac-sim/cache/computecache:/root/.nv/ComputeCache \
-    -v ~/docker/isaac-sim/logs:/root/.nvidia-omniverse/logs \
-    -v ~/docker/isaac-sim/data:/root/.local/share/ov/data \
-    -v ~/docker/isaac-sim/documents:/root/Documents \
-    -v "$(pwd)":/workspace/user \
-    --workdir /workspace/user \
-    nvcr.io/nvidia/isaac-lab:2.3.0
-
-# Inside container, verify GPU access
-nvidia-smi  # Should show GPU info
+# Save all environment camera images to disk
+save_camera_batch(env.unwrapped, output_dir="outputs/", camera_name="jetbot_camera", step=0)
 ```
 
-**Important Docker Notes**:
-- `--gpus all` is **required** for CUDA access
-- Remove `-e EGL_PLATFORM=surfaceless` if it causes CUDA initialization issues
-- For headless mode, use `--headless` flag in Python scripts instead of container env vars
-- X11 authorization (`XAUTHORITY`) may be needed even for headless mode to initialize GPU properly
+### RL Training (RSL-RL)
 
-### Quick Start
+Training uses [RSL-RL](https://github.com/leggedrobotics/rsl_rl) with PPO:
 
-```bash
-# 1. Run integration test
-cd navisim_isaacsim
-python scripts/smoke_test.py
+- **Config**: [ppo_warehouse_jetbot.yaml](navisim_lab/configs/rsl_rl/ppo_warehouse_jetbot.yaml)
+- **Network**: Actor-Critic with 2×256 hidden layers, ELU activation
+- **Hyperparameters**: LR=3e-4, GAE λ=0.95, γ=0.99, clip=0.2
+- **Default**: 10 iterations, 32 steps/env, 4 mini-batches
 
-# 2. Run smoke test in headless mode (recommended for containers)
-python scripts/smoke_test.py --headless
-
-# 3. Run with camera capture
-python scripts/run_with_jetbot_camera.py --num_envs 1
-
-# 4. Train RL agent
-python scripts/rsl_rl/train.py --num_envs 64 --headless
-
-# 5. Evaluate trained agent
-python scripts/rsl_rl/play.py --checkpoint logs/rsl_rl/warehouse_jetbot/ppo/model_10.pt --headless
-```
-
-### Creating Custom Environments
-
-1. **Define scene config** in `navisim_lab/envs/<your_env>/`:
-   ```python
-   @configclass
-   class MySceneCfg(InteractiveSceneCfg):
-       robot = MY_ROBOT_CONFIG
-       # Add your assets...
-   ```
-
-2. **Implement environment** inheriting from `DirectRLEnv`:
-   ```python
-   class MyEnv(DirectRLEnv):
-       def _setup_scene(self): ...
-       def _get_observations(self): ...
-       def _get_rewards(self): ...
-       def _pre_physics_step(self, actions): ...
-   ```
-
-3. **Register with Gymnasium** in `navisim_lab/tasks/<your_env>/`:
-   ```python
-   gymnasium.register(
-       id="MyTask-v0",
-       entry_point="navisim_lab.envs.<your_env>:MyEnv",
-       env_cfg_entry_point="navisim_lab.envs.<your_env>:MyEnvCfg",
-   )
-   ```
-
-### Adding New Robots
-
-1. Create `navisim_lab/robots/<robot_name>_cfg.py`:
-   ```python
-   ROBOT_CONFIG = ArticulationCfg(
-       prim_path="{ENV_REGEX_NS}/Robot",
-       spawn=sim_utils.UsdFileCfg(usd_path=ROBOT_USD),
-       actuators={...},
-   )
-   ```
-
-2. Reference in scene config:
-   ```python
-   from navisim_lab.robots.<robot_name>_cfg import ROBOT_CONFIG
-
-   class MySceneCfg(InteractiveSceneCfg):
-       robot = ROBOT_CONFIG
-   ```
+The environment is wrapped with `RslRlVecEnvWrapper` for RSL-RL compatibility. Note that this wrapper's `step()` returns 4 values `(obs, rewards, dones, info)` instead of Gymnasium's 5-tuple.
 
 ---
 
 ## Key Design Patterns
 
-### 1. **DirectRLEnv Pattern**
-- Single-class implementation for transparent, optimized RL
-- All logic in environment class (vs. Manager-Based approach)
-- Methods: `_setup_scene()`, `_pre_physics_step()`, `_get_observations()`, `_get_rewards()`
-- GPU tensors for all state/action/reward data
+### AppLauncher Pattern
 
-### 2. **InteractiveScene Management**
-- Handles multi-environment cloning automatically
-- Dictionary-style asset access: `self.scene["jetbot"]`
-- `env_origins` for spatial offsetting of parallel environments
-- Must call `scene.write_data_to_sim()` to apply actions
+**Critical**: Isaac Sim must be launched before importing any Omniverse/Isaac modules.
 
-### 3. **Configuration-Driven Design**
-- `@configclass` decorator for typed configurations
-- Separate config classes for scene, environment, and training
-- YAML files for hyperparameters (easy tuning without code changes)
+```python
+from isaaclab.app import AppLauncher
 
-### 4. **AppLauncher Pattern**
-- **CRITICAL**: Must launch Isaac Sim before importing Omniverse modules
-- Always first two lines of scripts:
-  ```python
-  from isaaclab.app import AppLauncher
-  app_launcher = AppLauncher(headless=False)
-  simulation_app = app_launcher.app
-  ```
+app_launcher = AppLauncher(args)
+simulation_app = app_launcher.app
+
+# NOW import Isaac modules
+import isaaclab.sim as sim_utils
+```
+
+### DirectRLEnv Lifecycle
+
+```python
+_setup_scene()          # Create InteractiveScene, clone environments, reset sim
+_pre_physics_step()     # Process actions before physics step
+_apply_action()         # Write data to simulation (scene.write_data_to_sim())
+_get_observations()     # Return {"policy": obs_tensor}
+_get_rewards()          # Return reward tensor
+_get_dones()            # Return (terminated, truncated) tensors
+_reset_idx(env_ids)     # Reset specific environments
+```
+
+### Configuration-Driven Design
+
+- `@configclass` decorator for typed configs (`WarehouseEnvCfg`, `WarehouseSceneCfg`)
+- YAML for training hyperparameters (easy tuning without code changes)
+- Asset paths centralized in [paths.py](navisim_lab/utils/paths.py)
 
 ---
 
-## Integration with NaviSim Core
+## Camera Transform Fix
 
-This package is designed to work alongside the core `navisim` package:
+The Jetbot USD uses `rotateZYX` (Euler angles) for its camera prim transform, but Isaac Lab's `XformPrimView` requires canonical form `[translate, orient, scale]`. This causes a `ValueError` during `sim.reset()`.
 
-- **NaviSim Core** ([../navisim/](../navisim/)): Gaussian Splatting rendering, spatial data structures, ROS bag processing
-- **NaviSim Isaac Lab** (this package): Physics simulation, RL environments, robot control
+**Solution**: `BaseNavigationEnv._standardize_camera_transforms()` uses the **Sdf layer API** to override the composed USD properties at the root layer level before `sim.reset()`. This converts `rotateZYX` to a quaternion (`orient`) while preserving the original transform values.
 
-### Workflow
-1. Use NaviSim core to process real-world data (elevation maps, Gaussian models)
-2. Use Isaac Lab integration for training navigation policies
-3. Policies can be tested with NaviSim's photorealistic rendering
-4. Deploy trained policies on physical robots
+The fix runs automatically in `_setup_scene()` after `clone_environments()` and before `sim.reset()`. No manual intervention is needed.
 
 ---
 
 ## Troubleshooting
 
-### **CUDA Not Available / "No CUDA GPUs are available"**
+### "ModuleNotFoundError: No module named 'navisim_lab'"
 
-This is the most common issue when running Isaac Sim in Docker containers.
-
-**Symptoms**:
-```
-[Error] [omni.physx.plugin] CUDA libs are present, but no suitable CUDA GPU was found!
-[Error] [carb.cudainterop.plugin] CUDA error 100: cudaErrorNoDevice
-RuntimeError: No CUDA GPUs are available
+Install the package:
+```bash
+conda activate isaaclab
+cd navisim_isaacsim
+pip install -e .
 ```
 
-**Root Causes**:
-1. Container launched without `--gpus all` flag
-2. X11 authorization issues preventing GPU initialization
-3. `EGL_PLATFORM=surfaceless` interfering with CUDA context
+### "Module 'isaaclab' not found"
 
-**Solutions** (try in order):
+Ensure Isaac Sim and Isaac Lab are installed. Check `PYTHONPATH` includes Isaac Lab.
 
-1. **Verify GPU access in container**:
-   ```bash
-   # Inside container, run:
-   nvidia-smi  # Should display GPU info
-   ls -la /dev/nvidia*  # Should show device nodes
-   ```
+### Camera transform errors ("Prim not xformable with standard transform operations")
 
-2. **Fix Docker launch command**:
-   ```bash
-   # Remove -e EGL_PLATFORM=surfaceless
-   # Add XAUTHORITY mount
-   docker run -it --rm \
-       --gpus all \
-       -e DISPLAY=$DISPLAY \
-       -e XAUTHORITY=$XAUTHORITY \
-       -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-       -v $XAUTHORITY:$XAUTHORITY \
-       ...
-   ```
+This should be handled automatically by `BaseNavigationEnv._standardize_camera_transforms()`. If you still see this error:
 
-3. **Use headless mode**:
-   ```bash
-   # Always add --headless flag to scripts when running in container
-   python scripts/rsl_rl/train.py --headless
-   python scripts/rsl_rl/play.py --headless --checkpoint model.pt
-   ```
+1. Clear Python caches: `find . -type d -name __pycache__ -exec rm -rf {} +`
+2. Verify your environment inherits from `BaseNavigationEnv`
+3. Ensure `_setup_scene()` calls `self._standardize_camera_transforms()` before `self.sim.reset()`
 
-4. **Check if Isaac Sim's PyTorch sees CUDA**:
-   ```bash
-   # Inside container, after AppLauncher:
-   python -c "from isaaclab.app import AppLauncher; app = AppLauncher(); import torch; print(torch.cuda.is_available())"
-   ```
+### CUDA architecture errors ("nvrtc: error: invalid value for --gpu-architecture")
 
-5. **Fallback to CPU mode** (performance degradation expected):
-   - The scripts automatically detect CUDA unavailability
-   - Environment will use `device="cpu"` and policy will load on CPU
-   - Physics simulation will be slower but functional
+On newer GPUs (e.g., Blackwell/GB10, compute capability 10.0) that aren't yet recognized by PyTorch JIT:
 
-**Known Issue**: Isaac Sim 2024.x on some systems requires X11 authentication even for headless GPU mode. The `XAUTHORITY` mount is essential.
+```bash
+TORCH_CUDA_ARCH_LIST="10.0" PYTORCH_JIT=0 python scripts/rsl_rl/train.py --headless
+```
 
-### **"Module 'isaaclab' not found"**
-Ensure Isaac Lab is installed and `PYTHONPATH` includes Isaac Lab directory.
+### CUDA not available in Docker
 
-### **AppLauncher import errors**
-Always import and launch AppLauncher before any Isaac/Omniverse modules.
+Ensure the container is launched with `--gpus all` and X11 authorization:
 
-### **"Authorization required, but no authorization protocol specified"**
-X11 authentication issue. Run `xhost +local:docker` before launching container, or mount `$XAUTHORITY` file.
+```bash
+docker run -it --rm \
+    --gpus all \
+    -e DISPLAY=$DISPLAY \
+    -e XAUTHORITY=$XAUTHORITY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+    -v $XAUTHORITY:$XAUTHORITY \
+    ...
+```
 
-### **Scene assets not appearing**
-Check USD paths in `navisim_lab/utils/paths.py`. Verify `ISAAC_NUCLEUS_DIR` points to valid Isaac Sim installation.
+### Scene assets not appearing
 
-### **Camera not tracking robot movement**
-Ensure camera config has `update_latest_camera_pose=True` and `spawn=None` (to reference existing camera in USD).
+Check USD paths in [paths.py](navisim_lab/utils/paths.py). Verify `ISAAC_NUCLEUS_DIR` points to a valid Isaac Sim nucleus directory.
 
-### **PhysX warnings on startup**
-Normal. Ensure `sim.reset()` is called after creating InteractiveScene.
+### Robot falls through ground
 
-### **Robot falls through ground**
-Check robot spawn height in ArticulationCfg InitialStateCfg. Should account for wheel/base height.
+Check spawn height in [jetbot_cfg.py](navisim_lab/robots/jetbot_cfg.py). Should be `0.21m` for the 7x-scaled Jetbot (wheel radius 0.03m × 7).
 
-### **"ValueError: not enough values to unpack (expected 5, got 4)"**
-`RslRlVecEnvWrapper.step()` returns 4 values (obs, rewards, dones, info), not standard Gymnasium 5-tuple. Use:
+### RSL-RL step() returns 4 values, not 5
+
+`RslRlVecEnvWrapper.step()` returns `(obs, rewards, dones, info)`, not the standard Gymnasium 5-tuple. Use:
 ```python
-obs, rewards, dones, info = env.step(actions)  # Correct for wrapped env
+obs, rewards, dones, info = env.step(actions)
 ```
+
+---
+
+## Integration with NaviSim Core
+
+This package works alongside the core `navisim` package:
+
+- **NaviSim Core** ([../navisim/](../navisim/)): Gaussian Splatting rendering, spatial data structures, sequence graphs
+- **NaviSim Isaac Lab** (this package): Physics simulation, RL environments, robot control
+
+### Workflow
+1. Use NaviSim core to process real-world data (elevation maps, Gaussian models)
+2. Use Isaac Lab integration for training navigation policies
+3. Test policies with NaviSim's photorealistic rendering
+4. Deploy trained policies on physical robots
 
 ---
 
@@ -488,18 +360,5 @@ obs, rewards, dones, info = env.step(actions)  # Correct for wrapped env
 
 - [Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab)
 - [Isaac Lab DirectRLEnv Guide](https://isaac-sim.github.io/IsaacLab/source/tutorials/03_envs/create_direct_rl_env.html)
-- [NaviSim Core Package](../navisim/)
 - [RSL-RL Repository](https://github.com/leggedrobotics/rsl_rl)
-
----
-
-## Contributing
-
-Follow the branch naming convention:
-- `feat/*` — new features
-- `fix/*` — bug fixes
-- `chore/*` — refactoring, configuration, cleanup
-
-Main branch: `main`
-
-See [CONTRIBUTING.md](../.github/CONTRIBUTING.md) for full guidelines.
+- [NaviSim Core Package](../navisim/)
