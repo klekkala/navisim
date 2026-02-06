@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import sys
 from pathlib import Path
 
+
+# Add navisim_isaacsim to path for imports
+SCRIPT_DIR = Path(__file__).resolve().parent
+NAVISIM_ISAACSIM_DIR = SCRIPT_DIR.parents[1]
+if str(NAVISIM_ISAACSIM_DIR) not in sys.path:
+    sys.path.insert(0, str(NAVISIM_ISAACSIM_DIR))
+
 from isaaclab.app import AppLauncher
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -14,7 +23,7 @@ def parse_args():
     parser.add_argument("--task", type=str, default="Navisim-Warehouse-Jetbot-v0", help="Task name")
     parser.add_argument("--num_envs", type=int, default=1, help="Number of parallel environments")
     parser.add_argument("--checkpoint", type=str, required=False, help="Path to model checkpoint (e.g., model_500.pt)")
-    parser.add_argument("--num_steps", type=int, default=5000, help="Number of steps to run")
+    parser.add_argument("--num_steps", type=int, default=50000, help="Number of steps to run")
     parser.add_argument(
         "--agent_cfg",
         type=str,
@@ -64,6 +73,7 @@ def main():
             env_cfg.sim.device = "cpu"
 
         env = gym.make(args.task, cfg=env_cfg)
+        
         logger.info(f"Environment created: obs={env.observation_space}, act={env.action_space}")
 
         # Wrap env for RSL-RL

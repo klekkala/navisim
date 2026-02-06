@@ -2,7 +2,14 @@
 import argparse
 import os
 import logging
+import sys
 from pathlib import Path
+
+# Add navisim_isaacsim to path for imports
+SCRIPT_DIR = Path(__file__).resolve().parent
+NAVISIM_ISAACSIM_DIR = SCRIPT_DIR.parents[1]
+if str(NAVISIM_ISAACSIM_DIR) not in sys.path:
+    sys.path.insert(0, str(NAVISIM_ISAACSIM_DIR))
 
 from isaaclab.app import AppLauncher
 
