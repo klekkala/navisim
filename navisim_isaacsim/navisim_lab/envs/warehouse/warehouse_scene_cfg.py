@@ -13,8 +13,8 @@ class WarehouseSceneCfg(InteractiveSceneCfg):
     """Scene configuration with Jetbot robot and warehouse environment.
 
     The Jetbot USD includes a built-in camera at chassis/rgb_camera/jetbot_camera.
-    We reference it directly using spawn=None and update_latest_camera_pose=True
-    to ensure the camera properly tracks the Jetbot's movement.
+    We reference it directly using spawn=None and update_latest_camera_pose=False
+    (Camera prims cannot have transforms standardized due to USD schema restrictions).
     """
 
     # Warehouse environment (spawned once globally at /World/Warehouse)
@@ -34,6 +34,7 @@ class WarehouseSceneCfg(InteractiveSceneCfg):
 
     # Jetbot onboard camera (reference existing camera prim in Jetbot USD)
     # The Jetbot USD file includes a camera at chassis/rgb_camera/jetbot_camera
-    # We use spawn=None to reference it (not spawn it) and update_latest_camera_pose=True
-    # to ensure XFormPrimView tracks the camera's position as Jetbot moves
-    jetbot_camera = jetbot_pov_camera
+    # Note: Commented out due to Camera prim transform restrictions
+    # The camera prim exists in the USD but we don't register it with Isaac Lab
+    # This avoids XformPrimView errors while still allowing direct USD access if needed
+    # jetbot_camera = jetbot_pov_camera  # DISABLED - Camera prim transform issues
