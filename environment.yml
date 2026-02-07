@@ -1,4 +1,4 @@
-name: isaaclab
+name: navisim
 channels:
   - conda-forge
 dependencies:
@@ -30,9 +30,11 @@ dependencies:
   - wheel=0.46.3
   - zstd=1.5.7
   - pip:
+      - --index-url https://pypi.org/simple
+      - --extra-index-url https://pypi.nvidia.com
       - --extra-index-url https://download.pytorch.org/whl/cu128
 
-      - absl-py==2.4.0
+      - absl-py>=2.0.0,<3.0.0
       - aioboto3==15.1.0
       - aiobotocore==2.24.0
       - aiodns==3.1.1
@@ -92,32 +94,7 @@ dependencies:
       - imageio-ffmpeg==0.6.0
       - importlib-metadata==8.7.1
       - iniconfig==2.3.0
-      - isaaclab==2.3.2
-      - isaacsim==5.1.0.0
-      - isaacsim-app==5.1.0.0
-      - isaacsim-asset==5.1.0.0
-      - isaacsim-benchmark==5.1.0.0
-      - isaacsim-code-editor==5.1.0.0
-      - isaacsim-core==5.1.0.0
-      - isaacsim-cortex==5.1.0.0
-      - isaacsim-example==5.1.0.0
-      - isaacsim-extscache-kit==5.1.0.0
-      - isaacsim-extscache-kit-sdk==5.1.0.0
-      - isaacsim-extscache-physics==5.1.0.0
-      - isaacsim-gui==5.1.0.0
-      - isaacsim-kernel==5.1.0.0
-      - isaacsim-replicator==5.1.0.0
-      - isaacsim-rl==5.1.0.0
-      - isaacsim-robot==5.1.0.0
-      - isaacsim-robot-motion==5.1.0.0
-      - isaacsim-robot-setup==5.1.0.0
-      - isaacsim-ros1==5.1.0.0
-      - isaacsim-ros2==5.1.0.0
-      - isaacsim-sensor==5.1.0.0
-      - isaacsim-storage==5.1.0.0
-      - isaacsim-template==5.1.0.0
-      - isaacsim-test==5.1.0.0
-      - isaacsim-utils==5.1.0.0
+      - isaaclab[isaacsim,all]==2.3.2
       - isodate==0.6.1
       - jinja2==3.1.6
       - jmespath==1.0.1
@@ -201,9 +178,9 @@ dependencies:
       - tensordict==0.11.0
       - tokenizers==0.22.2
       - toml==0.10.2
-      - torch==2.7.0+cu128
-      - torchaudio==2.7.0
+      - torch==2.7.0 
       - torchvision==0.22.0
+      - torchaudio==2.7.0
       - tornado==6.5.1
       - tqdm==4.67.3
       - transformers==5.1.0
@@ -222,4 +199,3 @@ dependencies:
       - wrapt==1.16.0
       - yarl==1.18.3
       - zipp==3.23.0
-prefix: /home/jiwon-hae/miniforge3/envs/isaaclab
