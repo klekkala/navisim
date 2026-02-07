@@ -1,54 +1,39 @@
-# NaviSim Isaac Lab Integration
+# NaviSim Isaac Lab
 
-Isaac Lab integration layer for NaviSim, enabling physics-based reinforcement learning for autonomous navigation with photorealistic rendering.
+Physics-based reinforcement learning for autonomous robot navigation using NVIDIA Isaac Lab.
 
 ## Overview
 
-This package (`navisim_isaacsim`) provides a bridge between NaviSim's photorealistic Gaussian Splatting rendering and NVIDIA Isaac Lab's physics simulation and RL workflows. It implements DirectRLEnv-based environments for training navigation agents in warehouse scenarios using the Jetbot robot platform.
+NaviSim Isaac Lab provides Gymnasium-compatible RL environments for training navigation agents in simulated environments using NVIDIA Isaac Sim and Isaac Lab. It currently implements a warehouse navigation task with the Jetbot robot platform.
 
 ## Prerequisites
 
 - **NVIDIA Isaac Sim** 5.1.0
 - **Isaac Lab** 2.3.2
-- **NaviSim core package** (parent `navisim/` directory)
 - CUDA-capable GPU
 - Python 3.11
 
 ## Installation
 
-### Option 1: Using the shared conda environment (recommended)
-
-If you haven't set up the project yet, create the conda environment from the root of the repository:
+### 1. Create the conda environment
 
 ```bash
-# From the project root (navisim/)
 conda env create -f environment.yml
 conda activate navisim
 ```
 
 This installs all dependencies including Isaac Sim 5.1, Isaac Lab 2.3.2, PyTorch (CUDA 12.8), and RSL-RL.
 
-Then install the `navisim_lab` package:
+### 2. Install the `navisim_lab` package
 
 ```bash
-cd navisim_isaacsim
 pip install -e .
 
 # Verify installation
 python -c "import navisim_lab; print('Success')"
 ```
 
-### Option 2: Existing Isaac Lab environment
-
-If you already have an Isaac Lab conda environment:
-
-```bash
-conda activate isaaclab
-cd navisim_isaacsim
-pip install -e .
-```
-
-> **Note:** Scripts in `scripts/` automatically add `navisim_isaacsim` to `sys.path`, so you can also run them directly without installing the package.
+> **Note:** Scripts in `scripts/` automatically add the project to `sys.path`, so you can also run them directly without installing the package.
 
 ---
 
@@ -69,7 +54,7 @@ navisim_isaacsim/
 │   │       ├── ppo_cfg.py           #   Config loader for RSL-RL
 │   │       └── ppo_warehouse_jetbot.yaml  # PPO hyperparameters
 │   ├── data/                         # Data management
-│   │   └── rocksdb_manager.py       #   RocksDB integration for Gaussian models
+│   │   └── rocksdb_manager.py       #   RocksDB integration for spatial data
 │   ├── envs/                         # RL environments
 │   │   ├── base/
 │   │   │   └── base_nav_env.py      #   BaseNavigationEnv (abstract base class)
@@ -100,6 +85,7 @@ navisim_isaacsim/
 │       └── play.py                  #     Evaluate trained agent
 ├── tests/                            # Test suite
 ├── examples/                         # Example scripts
+├── environment.yml                   # Conda environment specification
 ├── pyproject.toml                    # Package metadata
 └── README.md                         # This file
 ```
@@ -107,8 +93,6 @@ navisim_isaacsim/
 ---
 
 ## Quick Start
-
-All scripts must be run from the `navisim_isaacsim/` directory.
 
 ### 1. Integration Test
 
@@ -191,7 +175,7 @@ DirectRLEnv (Isaac Lab)
 - Spawned from Isaac Nucleus Jetbot USD at 7x scale
 - `ImplicitActuatorCfg` for `left_wheel_joint` and `right_wheel_joint`
 - High damping (1000.0) and effort limit (5000 N·m) to handle scaled mass
-- Spawn height: 0.21m (wheel radius 0.03m × 7)
+- Spawn height: 0.21m (wheel radius 0.03m x 7)
 
 ### Task Registration
 
@@ -225,8 +209,8 @@ save_camera_batch(env.unwrapped, output_dir="outputs/", camera_name="jetbot_came
 Training uses [RSL-RL](https://github.com/leggedrobotics/rsl_rl) with PPO:
 
 - **Config**: [ppo_warehouse_jetbot.yaml](navisim_lab/configs/rsl_rl/ppo_warehouse_jetbot.yaml)
-- **Network**: Actor-Critic with 2×256 hidden layers, ELU activation
-- **Hyperparameters**: LR=3e-4, GAE λ=0.95, γ=0.99, clip=0.2
+- **Network**: Actor-Critic with 2x256 hidden layers, ELU activation
+- **Hyperparameters**: LR=3e-4, GAE lambda=0.95, gamma=0.99, clip=0.2
 - **Default**: 10 iterations, 32 steps/env, 4 mini-batches
 
 The environment is wrapped with `RslRlVecEnvWrapper` for RSL-RL compatibility. Note that this wrapper's `step()` returns 4 values `(obs, rewards, dones, info)` instead of Gymnasium's 5-tuple.
@@ -285,14 +269,13 @@ The fix runs automatically in `_setup_scene()` after `clone_environments()` and 
 
 Install the package:
 ```bash
-conda activate isaaclab
-cd navisim_isaacsim
+conda activate navisim
 pip install -e .
 ```
 
 ### "Module 'isaaclab' not found"
 
-Ensure Isaac Sim and Isaac Lab are installed. Check `PYTHONPATH` includes Isaac Lab.
+Ensure Isaac Sim and Isaac Lab are installed. Recreate the environment from `environment.yml` if needed.
 
 ### Camera transform errors ("Prim not xformable with standard transform operations")
 
@@ -330,7 +313,7 @@ Check USD paths in [paths.py](navisim_lab/utils/paths.py). Verify `ISAAC_NUCLEUS
 
 ### Robot falls through ground
 
-Check spawn height in [jetbot_cfg.py](navisim_lab/robots/jetbot_cfg.py). Should be `0.21m` for the 7x-scaled Jetbot (wheel radius 0.03m × 7).
+Check spawn height in [jetbot_cfg.py](navisim_lab/robots/jetbot_cfg.py). Should be `0.21m` for the 7x-scaled Jetbot (wheel radius 0.03m x 7).
 
 ### RSL-RL step() returns 4 values, not 5
 
@@ -341,24 +324,8 @@ obs, rewards, dones, info = env.step(actions)
 
 ---
 
-## Integration with NaviSim Core
-
-This package works alongside the core `navisim` package:
-
-- **NaviSim Core** ([../navisim/](../navisim/)): Gaussian Splatting rendering, spatial data structures, sequence graphs
-- **NaviSim Isaac Lab** (this package): Physics simulation, RL environments, robot control
-
-### Workflow
-1. Use NaviSim core to process real-world data (elevation maps, Gaussian models)
-2. Use Isaac Lab integration for training navigation policies
-3. Test policies with NaviSim's photorealistic rendering
-4. Deploy trained policies on physical robots
-
----
-
 ## References
 
 - [Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab)
 - [Isaac Lab DirectRLEnv Guide](https://isaac-sim.github.io/IsaacLab/source/tutorials/03_envs/create_direct_rl_env.html)
 - [RSL-RL Repository](https://github.com/leggedrobotics/rsl_rl)
-- [NaviSim Core Package](../navisim/)
