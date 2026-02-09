@@ -57,3 +57,4 @@ build/
 
 *.png
 *.pt
+logs/
