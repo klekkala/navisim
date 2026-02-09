@@ -287,10 +287,33 @@ This should be handled automatically by `BaseNavigationEnv._standardize_camera_t
 
 ### CUDA architecture errors ("nvrtc: error: invalid value for --gpu-architecture")
 
-On newer GPUs (e.g., Blackwell/GB10, compute capability 10.0) that aren't yet recognized by PyTorch JIT:
+PyTorch JIT compiles CUDA kernels at runtime, and it needs to know your GPU's compute capability. If PyTorch doesn't recognize your GPU architecture, you'll see this error during `sim.reset()`.
+
+The scripts in `scripts/rsl_rl/` already set `TORCH_CUDA_ARCH_LIST` and `PYTORCH_JIT=0` automatically for Blackwell GPUs. If you're on a different GPU or need to override, set the environment variables before running:
 
 ```bash
+# Find your GPU's compute capability
+python -c "import torch; print(torch.cuda.get_device_capability())"
+# Example output: (10, 0) for Blackwell, (8, 9) for Ada Lovelace, (8, 6) for Ampere
+```
+
+Then set `TORCH_CUDA_ARCH_LIST` to match (major.minor):
+
+```bash
+# Blackwell (RTX 50 series, GB10)
 TORCH_CUDA_ARCH_LIST="10.0" PYTORCH_JIT=0 python scripts/rsl_rl/train.py --headless
+
+# Ada Lovelace (RTX 40 series)
+TORCH_CUDA_ARCH_LIST="8.9" python scripts/rsl_rl/train.py --headless
+
+# Ampere (RTX 30 series)
+TORCH_CUDA_ARCH_LIST="8.6" python scripts/rsl_rl/train.py --headless
+```
+
+To make this permanent, add to your shell profile (`~/.bashrc` or `~/.zshrc`):
+```bash
+export TORCH_CUDA_ARCH_LIST="10.0"  # Replace with your compute capability
+export PYTORCH_JIT=0                 # Only needed if JIT still fails
 ```
 
 ### CUDA not available in Docker
