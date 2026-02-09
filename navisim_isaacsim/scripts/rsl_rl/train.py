@@ -5,6 +5,10 @@ import logging
 import sys
 from pathlib import Path
 
+# Fix for newer GPUs (Blackwell/GB10) not recognized by PyTorch JIT
+os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "10.0")
+os.environ.setdefault("PYTORCH_JIT", "0")
+
 # Add navisim_isaacsim to path for imports
 SCRIPT_DIR = Path(__file__).resolve().parent
 NAVISIM_ISAACSIM_DIR = SCRIPT_DIR.parents[1]
