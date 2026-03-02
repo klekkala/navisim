@@ -15,7 +15,7 @@ class WarehouseEnvCfg(DirectRLEnvCfg):
     # Simulation settings
     sim: sim_utils.SimulationCfg = sim_utils.SimulationCfg(
         dt=1.0 / 60.0,  # 60 Hz simulation
-        render_interval=1,  # Render every step (required for camera capture)
+        render_interval=2,  # Must equal decimation — one render call per env step
         device="cuda:0",  # Isaac Sim requires CUDA
     )
 

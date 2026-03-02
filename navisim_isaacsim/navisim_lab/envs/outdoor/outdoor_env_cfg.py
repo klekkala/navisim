@@ -9,10 +9,7 @@ from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.utils import configclass
 import isaaclab.sim as sim_utils
 
-from navisim_lab.envs.outdoor.outdoor_scene_cfg import (
-    OutdoorSceneCfg,
-    OutdoorSceneWithCameraCfg,
-)
+from navisim_lab.envs.outdoor.outdoor_scene_cfg import OutdoorSceneCfg
 
 
 @configclass
@@ -44,16 +41,6 @@ class OutdoorEnvCfg(DirectRLEnvCfg):
     viewer_target: tuple[float, float, float] = (0.0, 1.0, 0.0)
 
 
-@configclass
-class OutdoorEnvWithCameraCfg(OutdoorEnvCfg):
-    """Outdoor env WITH Jetbot POV camera.
-
-    Use only with --enable_cameras (AppLauncher).
-    render_interval=2 = decimation ensures exactly one sim.render() per env step,
-    preventing the Replicator annotator from blocking on a missing frame.
-    """
-
-    scene: OutdoorSceneWithCameraCfg = OutdoorSceneWithCameraCfg(
-        num_envs=1,
-        env_spacing=4.0,
-    )
+# OutdoorEnvWithCameraCfg lives in outdoor_env_with_camera_cfg.py for the same
+# reason OutdoorSceneWithCameraCfg was moved — to avoid triggering the camera
+# import (and rtx_sensors=True) when only the no-camera env is used.

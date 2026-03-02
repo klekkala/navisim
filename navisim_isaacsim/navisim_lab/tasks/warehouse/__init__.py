@@ -30,7 +30,7 @@ gym.register(
     entry_point="navisim_lab.envs.warehouse.warehouse_env:WarehouseEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": "navisim_lab.envs.outdoor.outdoor_env_cfg:OutdoorEnvWithCameraCfg",
+        "env_cfg_entry_point": "navisim_lab.envs.outdoor.outdoor_env_with_camera_cfg:OutdoorEnvWithCameraCfg",
         "rsl_rl_cfg_entry_point": "navisim_lab.configs.rsl_rl.ppo_cfg:PPO_WAREHOUSE_JETBOT_CFG",
     },
 )

@@ -6,15 +6,14 @@ import isaaclab.sim as sim_utils
 
 from navisim_lab.robots.jetbot_cfg import JETBOT_CONFIG
 from navisim_lab.utils.paths import WAREHOUSE_USD
-from navisim_lab.camera.jetbot_camera import jetbot_pov_camera
 
 @configclass
 class WarehouseSceneCfg(InteractiveSceneCfg):
     """Scene configuration with Jetbot robot and warehouse environment.
 
-    The Jetbot USD includes a camera at chassis/rgb_camera/jetbot_camera.
-    Camera transforms are automatically standardized (rotateZYX -> orient)
-    in BaseNavigationEnv._standardize_camera_transforms() before sim.reset().
+    Camera is intentionally omitted. Adding a CameraCfg activates the RTX
+    offscreen renderer which causes the simulation to hang in headless mode
+    unless --enable_cameras is passed to AppLauncher.
     """
 
     warehouse = AssetBaseCfg(
@@ -26,6 +25,3 @@ class WarehouseSceneCfg(InteractiveSceneCfg):
     jetbot = JETBOT_CONFIG.replace(
         prim_path="{ENV_REGEX_NS}/Jetbot",
     )
-
-    # Jetbot onboard camera (references existing camera prim in Jetbot USD)
-    jetbot_camera = jetbot_pov_camera

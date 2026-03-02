@@ -29,7 +29,6 @@ from isaaclab.actuators import ImplicitActuatorCfg
 
 from navisim_lab.robots.jetbot_cfg import JETBOT_CONFIG
 from navisim_lab.utils.paths import CUSTOM_ENV_USD, JETBOT_USD
-from navisim_lab.camera.jetbot_camera import jetbot_pov_camera
 
 # The outdoor scene is ~4.3m x 6.6m (meters per unit = 1.0).
 # Jetbot base wheel radius = 0.03m. At scale=1.0:
@@ -88,16 +87,6 @@ class OutdoorSceneCfg(InteractiveSceneCfg):
     )
 
 
-@configclass
-class OutdoorSceneWithCameraCfg(OutdoorSceneCfg):
-    """Outdoor scene WITH Jetbot POV camera sensor.
-
-    Use this only when camera images are needed (data collection, visualisation).
-    Requires --enable_cameras to be set in AppLauncher and render_interval=decimation
-    in SimulationCfg to avoid annotator frame-wait hangs.
-
-    Camera transforms are standardised (rotateZYX -> orient) by
-    BaseNavigationEnv._standardize_camera_transforms() before sim.reset().
-    """
-
-    jetbot_camera = jetbot_pov_camera
+# OutdoorSceneWithCameraCfg lives in outdoor_scene_with_camera_cfg.py so that
+# importing THIS file never touches isaaclab.sensors.camera (which sets
+# rtx_sensors=True and causes headless runs to hang).
