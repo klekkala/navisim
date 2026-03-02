@@ -51,7 +51,7 @@ class SceneSection:
         return self.bounds[1]
 
     def contains_point(self, point: np.ndarray) -> bool:
-        """Check if a point is within this section's bounds.
+        """Check if a point is within this section's bounds (3D).
 
         Args:
             point: Point to check [x, y, z]
@@ -61,6 +61,24 @@ class SceneSection:
         """
         point = np.array(point)
         return np.all(point >= self.min_bounds) and np.all(point <= self.max_bounds)
+
+    def contains_point_xy(self, point: np.ndarray) -> bool:
+        """Check if a point is within this section's XY footprint (ignores Z).
+
+        Use this for robots navigating on a flat ground plane, where the robot's
+        Z coordinate may not fall within the sector's Z bounds.
+
+        Args:
+            point: Point to check [x, y, ...] (Z ignored)
+
+        Returns:
+            True if (x, y) is inside the section's XY bounds
+        """
+        p = np.array(point)
+        return (
+            p[0] >= self.min_bounds[0] and p[0] <= self.max_bounds[0]
+            and p[1] >= self.min_bounds[1] and p[1] <= self.max_bounds[1]
+        )
 
     def distance_to_point(self, point: np.ndarray) -> float:
         """Calculate distance from section center to a point.
@@ -149,16 +167,19 @@ class SceneGraph:
         return self.sections.get(section_id)
 
     def find_section_containing_point(self, point: np.ndarray) -> Optional[str]:
-        """Find which section contains a given point.
+        """Find which section contains a given point using XY footprint only.
+
+        XY-only matching is used because robots navigate on a flat ground plane
+        and their Z coordinate may not fall within a sector's 3D Z bounds.
 
         Args:
-            point: Point coordinates [x, y, z]
+            point: Point coordinates [x, y, z] (Z ignored for containment)
 
         Returns:
             Section ID or None if point is not in any section
         """
         for section_id, section in self.sections.items():
-            if section.contains_point(point):
+            if section.contains_point_xy(point):
                 return section_id
         return None
 

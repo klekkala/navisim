@@ -2,11 +2,18 @@
 
 This wrapper integrates DynamicSceneManager with IsaacLab environments,
 automatically managing USD section loading as robots navigate.
+
+Sector transition logic:
+- Transition detection runs every step (cheap XY-AABB check).
+- On detection: robot is immediately teleported to the new sector's center
+  (preserving heading, zeroing velocity) via BaseNavigationEnv.teleport_robot().
+- USD load/unload streaming runs every `update_frequency` steps (stage ops are
+  more expensive and do not need to be synchronous with the transition).
 """
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 import torch
 import numpy as np
 
@@ -18,205 +25,227 @@ logger = logging.getLogger(__name__)
 
 
 class DynamicSceneEnvWrapper:
-    """Wrapper that adds dynamic scene loading to an IsaacLab environment.
+    """Wrapper that adds dynamic scene loading and sector transitions to an IsaacLab env.
 
-    This wrapper intercepts environment steps and automatically loads/unloads
-    USD sections based on robot positions.
+    On each step the wrapper:
+    1. Detects whether the robot has crossed into a new sector (XY-AABB, every step).
+    2. On transition: swaps the loaded USD immediately and teleports the robot to
+       the new sector's center (heading preserved, velocity zeroed, no episode reset).
+    3. Updates the USD streaming window (load/unload by radius) every N steps.
 
-    Example:
-        # Create base environment
-        env = gym.make("Navisim-Warehouse-Jetbot-v0", cfg=env_cfg)
+    Example::
 
-        # Wrap with dynamic scene loading
-        scene_graph = SceneGraph.from_pickle("path/to/scene_graph.pkl")
-        env = DynamicSceneEnvWrapper(
-            env,
-            scene_graph=scene_graph,
-            update_frequency=10  # Update every 10 steps
-        )
+        env = gym.make("Navisim-Outdoor-Jetbot-v0", cfg=env_cfg)
+        scene_graph = build_scene_graph(...)   # SceneGraph with your USDZ sectors
+        env = DynamicSceneEnvWrapper(env, scene_graph=scene_graph)
 
-        # Use normally
         obs, _ = env.reset()
-        for _ in range(1000):
-            action = policy(obs)
-            obs, reward, done, info = env.step(action)
+        for _ in range(10000):
+            obs, reward, done, truncated, info = env.step(policy(obs))
+            if "section_transition" in info:
+                print(info["section_transition"])
     """
 
     def __init__(
         self,
         env: DirectRLEnv,
         scene_graph: SceneGraph,
-        max_loaded_sections: int = 9,
-        load_radius: float = 50.0,
+        max_loaded_sections: int = 3,
+        load_radius: float = 20.0,
         neighbor_depth: int = 1,
         update_frequency: int = 10,
         robot_index: int = 0,
-        preload_sections: Optional[list] = None,
+        preload_sections: Optional[List[str]] = None,
     ):
         """Initialize the dynamic scene wrapper.
 
         Args:
-            env: Base IsaacLab environment to wrap
-            scene_graph: SceneGraph with section definitions
-            max_loaded_sections: Maximum sections to keep loaded
-            load_radius: Radius around robot to load (meters)
-            neighbor_depth: Graph neighbor depth to include
-            update_frequency: How often to update (in steps)
-            robot_index: Which robot to track (for multi-robot envs)
-            preload_sections: Optional sections to preload initially
+            env: Base IsaacLab environment to wrap.
+            scene_graph: SceneGraph describing all sectors and their adjacency.
+            max_loaded_sections: Maximum USD sections to keep resident in the stage.
+            load_radius: Radius (metres) around the robot for pre-loading neighbours.
+            neighbor_depth: Graph-hop depth to include when computing the load window.
+            update_frequency: Steps between USD streaming updates (load/unload calls).
+                Transition detection and teleportation always run every step.
+            robot_index: Which parallel env index to use for single-robot tracking.
+            preload_sections: Optional section IDs to load at construction time.
         """
         self.env = env
         self.scene_graph = scene_graph
         self.update_frequency = update_frequency
         self.robot_index = robot_index
 
-        # Get USD stage from environment
-        stage = env.sim.stage
-
-        # Create scene manager
         self.scene_manager = DynamicSceneManager(
             scene_graph=scene_graph,
-            stage=stage,
+            stage=env.sim.stage,
             max_loaded_sections=max_loaded_sections,
             load_radius=load_radius,
             neighbor_depth=neighbor_depth,
             preload_sections=preload_sections,
         )
 
-        # Track steps for update frequency
         self.step_count = 0
-
-        # Track current section for each environment
-        self.current_sections = ["" for _ in range(env.num_envs)]
+        # Per-env current section tracking (empty string = unknown)
+        self.current_sections: List[str] = ["" for _ in range(env.num_envs)]
 
         logger.info(
-            f"Initialized DynamicSceneEnvWrapper: "
-            f"update_freq={update_frequency}, "
-            f"robot_idx={robot_index}"
+            f"DynamicSceneEnvWrapper: update_freq={update_frequency}, "
+            f"max_sections={max_loaded_sections}, load_radius={load_radius}m"
         )
 
+    # ------------------------------------------------------------------
+    # Public Gymnasium-compatible interface
+    # ------------------------------------------------------------------
+
     def reset(self, **kwargs):
-        """Reset environment and scene manager."""
         obs, info = self.env.reset(**kwargs)
 
-        # Get robot position and update scene
         robot_pos = self._get_robot_position()
         if robot_pos is not None:
+            # Seed the current section so the first step doesn't misfire
+            section_id = self.scene_graph.find_section_containing_point(robot_pos)
+            self.current_sections[self.robot_index] = section_id or ""
             self.scene_manager.update(robot_pos)
 
         self.step_count = 0
 
-        # Add scene info to info dict
         if isinstance(info, dict):
             info["scene_stats"] = self.scene_manager.get_stats()
-            info["current_section"] = self.scene_manager.get_current_section(robot_pos)
+            info["current_section"] = self.current_sections[self.robot_index]
 
         return obs, info
 
     def step(self, action):
-        """Step environment and update scene if needed."""
         obs, reward, terminated, truncated, info = self.env.step(action)
-
         self.step_count += 1
 
-        # Update scene at specified frequency
+        robot_pos = self._get_robot_position()
+        if robot_pos is None:
+            return obs, reward, terminated, truncated, info
+
+        # --- Transition detection: every step (cheap) ---
+        current_section = self.scene_graph.find_section_containing_point(robot_pos)
+        if (
+            current_section is not None
+            and current_section != self.current_sections[self.robot_index]
+        ):
+            reward = self._handle_transition(
+                current_section, robot_pos, reward, info
+            )
+
+        # --- USD streaming: every N steps (expensive stage ops) ---
         if self.step_count % self.update_frequency == 0:
-            robot_pos = self._get_robot_position()
-            if robot_pos is not None:
-                update_result = self.scene_manager.update(robot_pos)
-
-                # Add scene info to info dict
-                if isinstance(info, dict):
-                    info["scene_update"] = update_result
-                    info["scene_stats"] = self.scene_manager.get_stats()
-                    info["current_section"] = self.scene_manager.get_current_section(
-                        robot_pos
-                    )
-
-                # Check for section transitions
-                current_section = self.scene_manager.get_current_section(robot_pos)
-                if (
-                    current_section
-                    and current_section != self.current_sections[self.robot_index]
-                ):
-                    logger.info(
-                        f"Robot transitioned to section: {current_section} "
-                        f"(from {self.current_sections[self.robot_index]})"
-                    )
-                    self.current_sections[self.robot_index] = current_section
-
-                    if isinstance(info, dict):
-                        info["section_transition"] = {
-                            "from": self.current_sections[self.robot_index],
-                            "to": current_section,
-                        }
+            update_result = self.scene_manager.update(robot_pos)
+            if isinstance(info, dict):
+                info["scene_update"] = update_result
+                info["scene_stats"] = self.scene_manager.get_stats()
 
         return obs, reward, terminated, truncated, info
 
-    def _get_robot_position(self) -> Optional[np.ndarray]:
-        """Get current robot position from environment.
-
-        Returns:
-            Robot position [x, y, z] or None if not available
-        """
-        try:
-            # Access robot through scene
-            # Assuming env has 'scene' with robot articulation
-            if hasattr(self.env, "scene") and hasattr(self.env.scene, "data"):
-                # For environments with named robots (e.g., "jetbot")
-                robot_names = ["jetbot", "robot", "agent"]
-                for name in robot_names:
-                    if name in self.env.scene:
-                        robot = self.env.scene[name]
-                        if hasattr(robot, "data") and hasattr(
-                            robot.data, "root_state_w"
-                        ):
-                            # Get position of first environment's robot
-                            pos = robot.data.root_state_w[self.robot_index, :3]
-                            if isinstance(pos, torch.Tensor):
-                                pos = pos.cpu().numpy()
-                            return np.array(pos)
-
-            logger.warning("Could not extract robot position from environment")
-            return None
-
-        except Exception as e:
-            logger.error(f"Error getting robot position: {e}")
-            return None
-
     def close(self):
-        """Close environment and clean up scene manager."""
-        logger.info("Closing DynamicSceneEnvWrapper")
         self.scene_manager.reset()
         self.env.close()
 
-    def preload_path(self, path_section_ids: list):
-        """Preload sections along a path.
+    # ------------------------------------------------------------------
+    # Transition handling
+    # ------------------------------------------------------------------
+
+    def _handle_transition(
+        self,
+        new_section_id: str,
+        robot_pos: np.ndarray,
+        reward: Any,
+        info: dict,
+    ) -> Any:
+        """Handle a detected sector boundary crossing.
+
+        Steps:
+        1. Swap the loaded USD immediately (unload old, load new + neighbours).
+        2. Teleport the robot to the new sector's XY centre, keeping its current Z.
+        3. Zero the reward for this step to avoid the position-jump spike.
+        4. Record the transition in info.
 
         Args:
-            path_section_ids: List of section IDs to preload
+            new_section_id: The section the robot just entered.
+            robot_pos: Robot world position at the moment of detection.
+            reward: Current step reward tensor (will be zeroed).
+            info: Step info dict to annotate.
+
+        Returns:
+            Zeroed reward tensor.
         """
+        prev_section_id = self.current_sections[self.robot_index]
+        self.current_sections[self.robot_index] = new_section_id
+
+        new_section = self.scene_graph.get_section(new_section_id)
+        target: Optional[np.ndarray] = None
+
+        if new_section is not None:
+            # Teleport to sector XY centre; keep robot's live Z (wheel height)
+            target = new_section.center.copy()
+            target[2] = robot_pos[2]
+
+            # Swap USD immediately so the visual matches the new position
+            self.scene_manager.load_section(new_section_id)
+            if prev_section_id:
+                self.scene_manager.unload_section(prev_section_id)
+
+            # Teleport robot (no episode reset)
+            if hasattr(self.env, "teleport_robot"):
+                self.env.teleport_robot(target)
+            else:
+                logger.warning(
+                    "env does not implement teleport_robot(); "
+                    "sector transition will be visual-only."
+                )
+
+        # Zero reward on the transition step to avoid the position-jump spike
+        if isinstance(reward, torch.Tensor):
+            reward = torch.zeros_like(reward)
+        else:
+            reward = 0.0
+
+        logger.info(
+            f"Sector transition: '{prev_section_id}' -> '{new_section_id}' | "
+            f"teleport target: {target}"
+        )
+
+        if isinstance(info, dict):
+            info["section_transition"] = {
+                "from": prev_section_id,
+                "to": new_section_id,
+                "teleport_target": target.tolist() if target is not None else None,
+            }
+
+        return reward
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _get_robot_position(self) -> Optional[np.ndarray]:
+        """Return world-space XYZ of the tracked robot, or None on failure."""
+        try:
+            for name in ("jetbot", "robot", "agent"):
+                if name in self.env.scene:
+                    pos = self.env.scene[name].data.root_state_w[self.robot_index, :3]
+                    return pos.cpu().numpy() if isinstance(pos, torch.Tensor) else np.array(pos)
+        except Exception as e:
+            logger.error(f"Error getting robot position: {e}")
+        return None
+
+    def preload_path(self, path_section_ids: List[str]):
+        """Preload sections along a planned route."""
         self.scene_manager.preload_path(path_section_ids)
 
     def get_scene_stats(self) -> Dict:
-        """Get scene loading statistics.
-
-        Returns:
-            Dictionary with statistics
-        """
         return self.scene_manager.get_stats()
 
     def visualize_scene_graph(self, output_path: Optional[Path] = None):
-        """Visualize the scene graph.
-
-        Args:
-            output_path: Optional path to save visualization
-        """
         self.scene_graph.visualize(output_path)
 
-    # Forward all other attributes to wrapped environment
+    # Forward all other attribute access to the wrapped env
     def __getattr__(self, name):
-        """Forward attribute access to wrapped environment."""
         return getattr(self.env, name)
 
     def __repr__(self) -> str:

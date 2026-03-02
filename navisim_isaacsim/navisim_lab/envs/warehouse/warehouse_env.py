@@ -74,18 +74,25 @@ class WarehouseEnv(BaseNavigationEnv):
     def _compute_navigation_reward(self) -> torch.Tensor:
         """Compute rewards based on forward progress along x-axis.
 
+        A teleport from a sector transition causes a discontinuous jump in X.
+        Any step where |delta_x| > 1 m is treated as a teleport and returns 0
+        reward; prev_x is also updated so the *following* step is clean.
+
         Returns:
             Reward tensor for each environment. Shape: (num_envs,)
         """
-        # Current x position
         curr_x = self.scene["jetbot"].data.root_state_w[:, 0]
-
-        # Reward = forward displacement
-        reward = (curr_x - self.prev_x) * self.cfg.forward_reward_weight
-
-        # Update previous position
+        delta_x = curr_x - self.prev_x
         self.prev_x = curr_x.clone()
 
+        # Zero reward on teleport steps (|delta| > 1 m is not physically reachable
+        # in a single sim step at normal speeds)
+        teleport_mask = delta_x.abs() > 1.0
+        reward = torch.where(
+            teleport_mask,
+            torch.zeros_like(delta_x),
+            delta_x * self.cfg.forward_reward_weight,
+        )
         return reward
 
     def _check_termination_conditions(self) -> tuple[torch.Tensor, torch.Tensor]:
