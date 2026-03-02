@@ -56,8 +56,6 @@ def main():
     try:
         logger.info(f"Task: {args.task} | Envs: {args.num_envs} | Steps: {args.num_steps}")
 
-        # Enable cameras and launch Isaac Sim
-        args.enable_cameras = True
         app_launcher = AppLauncher(args)
         simulation_app = app_launcher.app
 

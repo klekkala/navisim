@@ -59,7 +59,7 @@ import navisim_lab.tasks  # registers all Gymnasium environments
 
 from navisim_lab.envs.warehouse.warehouse_env import WarehouseEnv
 from navisim_lab.envs.warehouse.warehouse_env_cfg import WarehouseEnvCfg
-from navisim_lab.envs.outdoor.outdoor_env_cfg import OutdoorEnvWithCameraCfg
+from navisim_lab.envs.outdoor.outdoor_env_with_camera_cfg import OutdoorEnvWithCameraCfg
 
 
 def save_camera_image(rgb_array, output_dir: str, prefix: str = "camera"):

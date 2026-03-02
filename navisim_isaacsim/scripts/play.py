@@ -160,9 +160,6 @@ def main():
             args.agent = detect_agent_from_checkpoint(checkpoint_path)
             logger.info(f"Auto-detected agent: {args.agent}")
 
-        # Enable cameras
-        args.enable_cameras = True
-
         # Launch Isaac Sim
         app_launcher = AppLauncher(args)
         simulation_app = app_launcher.app

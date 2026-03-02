@@ -123,9 +123,6 @@ def main():
     env = None
 
     try:
-        # Enable cameras (required for camera-based tasks)
-        args.enable_cameras = True
-
         # Launch Isaac Sim
         app_launcher = AppLauncher(args)
         simulation_app = app_launcher.app
