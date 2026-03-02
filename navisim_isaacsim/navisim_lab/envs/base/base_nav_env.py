@@ -2,9 +2,9 @@
 
 from abc import abstractmethod
 import logging
+import numpy as np
 import torch
 from isaaclab.envs import DirectRLEnv
-from isaaclab.scene import InteractiveScene
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +57,16 @@ class BaseNavigationEnv(DirectRLEnv):
     def _setup_scene(self):
         """Setup the scene with standard configuration.
 
+        Note: InteractiveScene is already created and assigned to self.scene by
+        DirectRLEnv.__init__ before this method is called. We only need to handle
+        camera transform fixes and simulation reset here.
+
         Order of operations:
-        1. Create InteractiveScene from config
-        2. Clone environments for parallelization
-        3. Standardize camera transforms (if camera is in scene)
-        4. Reset simulation (sensors initialize here)
-        5. Set viewer camera
+        1. Clone environments for parallelization
+        2. Standardize camera transforms (if camera is in scene)
+        3. Reset simulation (sensors initialize here)
+        4. Set viewer camera
         """
-        self.scene = InteractiveScene(self.cfg.scene)
         self.scene.clone_environments(copy_from_source=False)
 
         # Fix camera transforms BEFORE sim.reset() - sensors initialize during reset
@@ -197,6 +199,39 @@ class BaseNavigationEnv(DirectRLEnv):
         progress = current_pos[:, axis] - self.prev_position[:, axis]
         self.prev_position = current_pos.clone()
         return progress
+
+    def teleport_robot(
+        self,
+        position: np.ndarray,
+        env_ids: torch.Tensor | None = None,
+    ) -> None:
+        """Teleport the robot to a world-space position without resetting the episode.
+
+        Called by DynamicSceneEnvWrapper on sector transitions. The robot's
+        heading (orientation) is preserved; only position and velocity change.
+        Velocity is zeroed to prevent physics instability from the jump.
+
+        Args:
+            position: Target world-space XYZ. Shape (3,) numpy array.
+            env_ids: Parallel env indices to teleport. Defaults to all envs.
+        """
+        if env_ids is None:
+            env_ids = torch.arange(self.num_envs, device=self.device)
+
+        pos_t = (
+            torch.tensor(np.array(position, dtype=np.float32), device=self.device)
+            .unsqueeze(0)
+            .expand(len(env_ids), -1)
+        )  # (n_envs, 3)
+
+        # Preserve current orientation; replace position; zero velocity
+        root_state = self.scene["jetbot"].data.root_state_w[env_ids].clone()
+        root_state[:, :3] = pos_t
+        root_state[:, 7:] = 0.0  # zero linear + angular velocity
+
+        self.scene["jetbot"].write_root_pose_to_sim(root_state[:, :7], env_ids)
+        self.scene["jetbot"].write_root_velocity_to_sim(root_state[:, 7:], env_ids)
+        self.scene.write_data_to_sim()
 
     def _reset_navigation_state(self, env_ids: torch.Tensor):
         """Reset common navigation state for specified environments.
