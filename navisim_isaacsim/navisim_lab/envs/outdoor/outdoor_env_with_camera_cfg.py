@@ -3,7 +3,7 @@
 Kept in a separate file from outdoor_env_cfg.py so that importing the
 no-camera env config never triggers the isaaclab.sensors.camera import.
 
-Only import this module when launching Navisim-Outdoor-Jetbot-Camera-v0
+Only import this module when launching Navisim-Outdoor-Jetbot
 with --enable_cameras.
 """
 

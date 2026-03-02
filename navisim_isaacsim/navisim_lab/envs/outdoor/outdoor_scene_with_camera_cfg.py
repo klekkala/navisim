@@ -7,7 +7,7 @@ activates the RTX offscreen renderer and causes headless runs (without
 --enable_cameras) to hang indefinitely.
 
 Only import this module when you actually need camera capture, i.e. when
-using Navisim-Outdoor-Jetbot-Camera-v0 with --enable_cameras.
+using Navisim-Outdoor-Jetbot with --enable_cameras.
 """
 
 from isaaclab.utils import configclass

@@ -1,18 +1,21 @@
 # scripts/run_with_jetbot_camera.py
 
-"""Run Navisim navigation with Jetbot first-person camera capture.
+"""Run Navisim navigation with optional Jetbot first-person camera capture.
 
 Works with both the warehouse and outdoor (3DGS) environments.
 
 Usage:
-    # Warehouse environment (default)
+    # Warehouse environment (default, no camera)
     python scripts/run_with_jetbot_camera.py
 
-    # Outdoor 3DGS environment
-    python scripts/run_with_jetbot_camera.py --task Navisim-Outdoor-Jetbot-v0
+    # Outdoor 3DGS environment without camera
+    python scripts/run_with_jetbot_camera.py --task Navisim-Outdoor-Jetbot
 
-    # Headless with custom output dir
-    python scripts/run_with_jetbot_camera.py --task Navisim-Outdoor-Jetbot-v0 --headless --save_interval 50
+    # Outdoor 3DGS environment WITH Jetbot POV camera capture
+    python scripts/run_with_jetbot_camera.py --task Navisim-Outdoor-Jetbot --enable_cameras
+
+    # Headless with camera and custom output dir
+    python scripts/run_with_jetbot_camera.py --task Navisim-Outdoor-Jetbot --enable_cameras --headless --save_interval 50
 """
 
 import argparse
@@ -27,13 +30,13 @@ from isaaclab.app import AppLauncher
 # ---------------------------------------------------
 # 1. Parse arguments FIRST (before launching app)
 # ---------------------------------------------------
-parser = argparse.ArgumentParser(description="Run Navisim with Jetbot first-person camera.")
+parser = argparse.ArgumentParser(description="Run Navisim with optional Jetbot first-person camera.")
 parser.add_argument("--task", type=str, default="Navisim-Warehouse-Jetbot-v0",
                     choices=[
                         "Navisim-Warehouse-Jetbot-v0",
-                        "Navisim-Outdoor-Jetbot-Camera-v0",
+                        "Navisim-Outdoor-Jetbot",
                     ],
-                    help="Which environment to run (outdoor variant includes camera)")
+                    help="Which environment to run")
 parser.add_argument("--num_envs", type=int, default=1, help="Number of parallel environments")
 parser.add_argument("--max_steps", type=int, default=1000, help="Maximum simulation steps")
 parser.add_argument("--save_interval", type=int, default=100, help="Steps between image saves")
@@ -42,7 +45,8 @@ parser.add_argument("--output_dir", type=str, default=None,
 
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
-args.enable_cameras = True
+# --enable_cameras is provided by AppLauncher.add_app_launcher_args above.
+# Pass it on the CLI to activate the RTX renderer and Jetbot POV camera.
 
 app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
@@ -65,10 +69,11 @@ import navisim_lab.tasks  # registers all Gymnasium environments
 
 from navisim_lab.envs.warehouse.warehouse_env import WarehouseEnv
 from navisim_lab.envs.warehouse.warehouse_env_cfg import WarehouseEnvCfg
-from navisim_lab.envs.outdoor.outdoor_env_with_camera_cfg import OutdoorEnvWithCameraCfg
+from navisim_lab.envs.outdoor.outdoor_env_cfg import OutdoorEnvCfg
 
 
 def save_camera_image(rgb_array, output_dir: str, prefix: str = "camera"):
+    output_dir = str(output_dir)  # guard against Path or None slipping through
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
     filepath = os.path.join(output_dir, f"{prefix}_{timestamp}.png")
@@ -79,9 +84,14 @@ def save_camera_image(rgb_array, output_dir: str, prefix: str = "camera"):
 
 
 def main():
-    # Select config based on task
-    if args.task == "Navisim-Outdoor-Jetbot-Camera-v0":
-        env_cfg = OutdoorEnvWithCameraCfg()
+    # Select config based on task and --enable_cameras flag
+    if args.task == "Navisim-Outdoor-Jetbot":
+        if getattr(args, "enable_cameras", False):
+            # Import only when cameras are requested (avoids rtx_sensors side-effect)
+            from navisim_lab.envs.outdoor.outdoor_env_with_camera_cfg import OutdoorEnvWithCameraCfg
+            env_cfg = OutdoorEnvWithCameraCfg()
+        else:
+            env_cfg = OutdoorEnvCfg()
     else:
         env_cfg = WarehouseEnvCfg()
 
@@ -98,6 +108,7 @@ def main():
 
     print(f"\n{'='*70}")
     print(f"  Task:        {args.task}")
+    print(f"  Cameras:     {'enabled' if getattr(args, 'enable_cameras', False) else 'disabled'}")
     print(f"  Num envs:    {args.num_envs}")
     print(f"  Device:      {env.device}")
     print(f"  Output dir:  {output_dir}")

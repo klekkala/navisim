@@ -35,7 +35,7 @@ class DynamicSceneEnvWrapper:
 
     Example::
 
-        env = gym.make("Navisim-Outdoor-Jetbot-v0", cfg=env_cfg)
+        env = gym.make("Navisim-Outdoor-Jetbot", cfg=env_cfg)
         scene_graph = build_scene_graph(...)   # SceneGraph with your USDZ sectors
         env = DynamicSceneEnvWrapper(env, scene_graph=scene_graph)
 
