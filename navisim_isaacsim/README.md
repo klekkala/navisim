@@ -15,8 +15,8 @@ NaviSim Isaac Lab provides Gymnasium-compatible RL environments for training nav
 
 ### Done
 - [x] Warehouse navigation task (`Navisim-Warehouse-Jetbot-v0`) — Jetbot at 7× scale, forward-progress reward, PPO training with RSL-RL
-- [x] Outdoor navigation task (`Navisim-Outdoor-Jetbot-v0`) — 3DGS USDZ as visual backdrop, invisible ground plane for physics, Jetbot at real-world scale (1×)
-- [x] Jetbot POV camera capture (`Navisim-Outdoor-Jetbot-Camera-v0`) — isolated in separate config files to prevent RTX hang in headless mode
+- [x] Outdoor navigation task (`Navisim-Outdoor-Jetbot`) — 3DGS USDZ as visual backdrop, invisible ground plane for physics, Jetbot at real-world scale (1×)
+- [x] Jetbot POV camera capture — pass `--enable_cameras` to activate; isolated in separate config files to prevent RTX hang in headless mode
 - [x] Camera/no-camera config split — camera configs live in `*_with_camera_cfg.py` files; importing the standard env never touches `isaaclab.sensors.camera`
 - [x] `render_interval` = `decimation` = 2 enforced in all env configs — prevents double-render hang
 - [x] `BaseNavigationEnv.teleport_robot()` — moves robot to arbitrary world position without episode reset (used by multi-sector transitions)
@@ -136,8 +136,7 @@ navisim_isaacsim/
 | Task ID | Environment | Camera | Notes |
 |---------|-------------|--------|-------|
 | `Navisim-Warehouse-Jetbot-v0` | Static warehouse USD | No | Baseline indoor navigation |
-| `Navisim-Outdoor-Jetbot-v0` | Your USDZ (`new_point_cloud.usdz`) | No | RL training, headless-safe |
-| `Navisim-Outdoor-Jetbot-Camera-v0` | Your USDZ | Yes | Camera capture; requires `--enable_cameras` |
+| `Navisim-Outdoor-Jetbot` | Your USDZ (`new_point_cloud.usdz`) | Optional | RL training; add `--enable_cameras` to activate Jetbot POV camera |
 
 ---
 
@@ -158,7 +157,7 @@ This launches Isaac Sim, creates the warehouse environment, runs 10 random actio
 python scripts/rsl_rl/train.py --num_envs 64 --headless
 
 # Outdoor 3DGS environment
-python scripts/rsl_rl/train.py --task Navisim-Outdoor-Jetbot-v0 --num_envs 4 --headless
+python scripts/rsl_rl/train.py --task Navisim-Outdoor-Jetbot --num_envs 4 --headless
 ```
 
 Checkpoints are saved to `check_pts/rsl_rl/warehouse_jetbot/ppo/` (configurable via `--log_dir`).
@@ -175,14 +174,17 @@ python scripts/rsl_rl/play.py --checkpoint check_pts/rsl_rl/warehouse_jetbot/ppo
 python scripts/rsl_rl/play.py
 
 # Outdoor task
-python scripts/rsl_rl/play.py --task Navisim-Outdoor-Jetbot-v0
+python scripts/rsl_rl/play.py --task Navisim-Outdoor-Jetbot
 ```
 
 ### 4. Run with Camera Capture
 
 ```bash
-# Requires --enable_cameras; uses Navisim-Outdoor-Jetbot-Camera-v0
-python scripts/run_with_jetbot_camera.py --enable_cameras
+# Outdoor task without camera (headless-safe)
+python scripts/run_with_jetbot_camera.py --task Navisim-Outdoor-Jetbot
+
+# Outdoor task WITH Jetbot POV camera capture
+python scripts/run_with_jetbot_camera.py --task Navisim-Outdoor-Jetbot --enable_cameras
 ```
 
 Camera frames are saved to `outputs/jetbot_pov/`.
@@ -281,13 +283,13 @@ To prevent this, camera configs are kept in **separate files** that are never im
 | `outdoor_env_cfg.py` | No | All RL training / eval |
 | `outdoor_env_with_camera_cfg.py` | Yes | Camera capture only |
 
-**Rule**: Only use `Navisim-Outdoor-Jetbot-Camera-v0` when you also pass `--enable_cameras`.
+**Rule**: Only pass `--enable_cameras` when you want the Jetbot POV camera active.
 
-| Task | `--enable_cameras` required? |
-|------|-------------------------------|
-| `Navisim-Outdoor-Jetbot-v0` | No |
+| Task | `--enable_cameras` needed? |
+|------|----------------------------|
 | `Navisim-Warehouse-Jetbot-v0` | No |
-| `Navisim-Outdoor-Jetbot-Camera-v0` | **Yes** |
+| `Navisim-Outdoor-Jetbot` (no camera) | No |
+| `Navisim-Outdoor-Jetbot` + `--enable_cameras` | **Yes** |
 
 ### Capturing Camera Images
 
@@ -356,7 +358,7 @@ graph.to_pickle("assets/scene_graph.pkl")
 ```python
 from navisim_lab.scene import DynamicSceneEnvWrapper
 
-env = gym.make("Navisim-Outdoor-Jetbot-v0")
+env = gym.make("Navisim-Outdoor-Jetbot")
 env = DynamicSceneEnvWrapper(
     env,
     scene_graph=graph,
