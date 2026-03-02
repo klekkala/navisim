@@ -175,9 +175,29 @@ The outdoor environment loads a 3D Gaussian Splatting (3DGS) USDZ file as a **pu
 - The **USDZ** is loaded as a static visual reference only.
 - `SimulationContext` (created automatically by `DirectRLEnv`) provides the physics scene.
 
-### Placing Your USDZ
+### Downloading the Sample USDZ
 
-Copy your USDZ to the assets directory:
+A sample 3DGS-converted outdoor scene is available for download:
+
+**[Download new_point_cloud.usdz (Google Drive)](https://drive.google.com/file/d/1-0rLtj1qhKbFaMejgJJsn097Aucyrtpt/view?usp=drive_link)**
+
+After downloading, place it in the `assets/` directory inside `navisim_isaacsim/`:
+
+```
+navisim_isaacsim/
+└── assets/
+    └── new_point_cloud.usdz   ← place it here
+```
+
+```bash
+# From the repo root
+mkdir -p navisim_isaacsim/assets
+mv ~/Downloads/new_point_cloud.usdz navisim_isaacsim/assets/new_point_cloud.usdz
+```
+
+### Placing Your Own USDZ
+
+To use your own scene instead of the sample, copy it to the same location:
 
 ```bash
 cp /path/to/your/scene.usdz navisim_isaacsim/assets/new_point_cloud.usdz
