@@ -135,8 +135,7 @@ def main():
                         logger.warning(f"Could not save camera images: {e}")
 
             if dones.any():
-                logger.info(f"Episode ended at step {step + 1}")
-                break
+                logger.info(f"Episode reset at step {step + 1} (env auto-resets)")
 
         logger.info(f"Rollout completed! Total reward: {total_reward:.2f}")
 

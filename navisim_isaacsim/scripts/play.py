@@ -17,7 +17,12 @@ Example usage:
 
 import argparse
 import logging
+import os
 import sys
+
+# Fix for newer GPUs (Blackwell/GB10) not recognized by PyTorch JIT
+os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "10.0")
+os.environ.setdefault("PYTORCH_JIT", "0")
 from pathlib import Path
 
 # Add navisim_isaacsim to path for imports

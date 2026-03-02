@@ -16,6 +16,12 @@ Usage:
 """
 
 import argparse
+import os
+
+# Fix for newer GPUs (Blackwell/GB10) not recognized by PyTorch JIT
+os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "10.0")
+os.environ.setdefault("PYTORCH_JIT", "0")
+
 from isaaclab.app import AppLauncher
 
 # ---------------------------------------------------
@@ -99,8 +105,12 @@ def main():
 
     obs, _ = env.reset()
 
-    camera = env.scene["jetbot_camera"]
-    print(f"[Camera] path={camera.cfg.prim_path}  resolution={camera.image_shape}")
+    has_camera = "jetbot_camera" in env.scene.keys()
+    camera = env.scene["jetbot_camera"] if has_camera else None
+    if has_camera:
+        print(f"[Camera] path={camera.cfg.prim_path}  resolution={camera.image_shape}")
+    else:
+        print("[Camera] No camera in scene — image capture disabled")
 
     print(f"[Scene] entities: {list(env.scene.keys())}")
     jetbot_pos = env.scene["jetbot"].data.root_pos_w[0].cpu().numpy()
@@ -124,8 +134,8 @@ def main():
         obs, rewards, terminated, truncated, info = env.step(actions)
         episode_rewards += rewards
 
-        # Capture POV image
-        if t % args.save_interval == 0:
+        # Capture POV image (only when scene has a camera sensor)
+        if has_camera and t % args.save_interval == 0:
             rgb_tensor = camera.data.output["rgb"][0]
             rgb_array = rgb_tensor.cpu().numpy()
             cam_pos = camera.data.pos_w[0].cpu().numpy()
